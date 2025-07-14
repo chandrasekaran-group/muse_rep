@@ -48,8 +48,9 @@ def eval(
             clean_up_tokenization_spaces=True)[0]
 
         stripped_output = get_prefix_before_words_occur(output, ["\n\n", "\nQuestion", "Question:"])
+        
 
-        # logger.log(prompt, answer, stripped_output, output, question=question)
-        logger.log(prompt, answer, stripped_output, output)
+        logger.log(prompt, answer, stripped_output, output, question=question)
+        # logger.log(prompt, answer, stripped_output, output)
 
     return logger.report()

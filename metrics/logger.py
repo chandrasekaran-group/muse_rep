@@ -82,12 +82,14 @@ class RougeEvalLogger_new:
         ]
         if len(self.history[0]) == 9:  # If question is included
             columns.append('question')
+            columns_subset = ['question', 'expected_response', 'stripped_output', 'rougeL_fmeasure', 'rougeL_recall', 'rouge1_fmeasure', 'rouge1_recall']
+        else:
+            columns_subset = ['prompt', 'expected_response', 'stripped_output', 'rougeL_fmeasure', 'rougeL_recall', 'rouge1_fmeasure', 'rouge1_recall']
+
         history_df_short = pd.DataFrame(self.history, columns=columns)
-        history_df_short = history_df_short[['expected_response', 'stripped_output', 'rougeL_fmeasure', 'rougeL_recall', 'rouge1_fmeasure', 'rouge1_recall']]
+        history_df_short = history_df_short[columns_subset]
         history_df_short.to_csv('/scratch/aebrahim/muse_rep/temp/books_df_short.csv', index=False)
         
-
-
 
     def report(self) -> Tuple[Dict, Dict]:
         columns = [
