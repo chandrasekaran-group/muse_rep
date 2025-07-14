@@ -8,6 +8,26 @@ import torch
 from torch.utils.data import Dataset
 import torch.nn.functional as F
 from transformers import AutoTokenizer
+import csv
+
+
+def chunk_tokens(tokens, chunk_size):
+    for i in range(0, len(tokens), chunk_size):
+        yield tokens[i:i + chunk_size]
+
+def main(txt_path, csv_path):
+    tokenizer = AutoTokenizer.from_pretrained("meta-llama/Llama-2-7b-hf")
+    with open(txt_path, "r", encoding="utf-8") as f:
+        text = f.read()
+    tokens = tokenizer.encode(text)
+    chunks = list(chunk_tokens(tokens, 2048))
+
+    with open(csv_path, "w", newline='', encoding="utf-8") as csvfile:
+        writer = csv.writer(csvfile)
+        writer.writerow(["id", "text"])
+        for idx, chunk in enumerate(chunks):
+            chunk_text = tokenizer.decode(chunk)
+            writer.writerow([idx, chunk_text])
 
 
 class DefaultDataset(Dataset):
@@ -75,6 +95,16 @@ class DefaultDataset(Dataset):
             self.input_ids[-1] = torch.concat(
                 [self.input_ids[-1], self.input_ids[0]], dim=-1
             )[:max_len]
+
+        if False:
+            main(
+                file_path,
+                Path(file_path).with_suffix('.csv')
+            )
+            # with open(index_file, 'r') as file:
+            #     select_indices = json.load(file)
+
+            # self.input_ids = [self.input_ids[idx] for idx in select_indices]
 
         # Original strings
         self.strings = tokenizer.batch_decode(self.input_ids, skip_special_tokens=True)
