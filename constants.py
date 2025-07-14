@@ -21,6 +21,8 @@ DEFAULT_DATA = {
         'privleak_retain_file': "data/books/privleak/retain.json",
         'privleak_holdout_file': "data/books/privleak/holdout.json",
         'knowmem_forget_qa_file': "data/books/knowmem/forget_qa.json",
+        # 'knowmem_forget_qa_file': "data/books/knowmem/forget_qa_combined.csv",
+        # 'knowmem_forget_qa_file': "data/books/knowmem/forget_qa_combined_sample.csv",
         'knowmem_forget_qa_icl_file': "data/books/knowmem/forget_qa_icl.json",
         'knowmem_retain_qa_file': "data/books/knowmem/retain_qa.json",
         'knowmem_retain_qa_icl_file': "data/books/knowmem/retain_qa_icl.json",

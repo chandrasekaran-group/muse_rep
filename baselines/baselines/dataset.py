@@ -9,6 +9,9 @@ from torch.utils.data import Dataset
 import torch.nn.functional as F
 from transformers import AutoTokenizer
 import csv
+import random
+import numpy as np
+from os.path import basename, dirname, join as pathjoin
 
 
 def chunk_tokens(tokens, chunk_size):
@@ -30,6 +33,23 @@ def main(txt_path, csv_path):
             writer.writerow([idx, chunk_text])
 
 
+def load_forget_subset(n_total, portion, FORGET_SEED=42):
+    """
+    Loads a portion of the forget set, using a fixed random seed.
+    The smaller portions are always subsets of larger portions.
+    """
+    # n_select = int(n_total * portion)
+    random.seed(FORGET_SEED)
+    np.random.seed(FORGET_SEED)
+    indices = list(range(n_total))
+    random.shuffle(indices)
+    n_select = max(1, int(n_total * portion))
+    selected_indices = sorted(indices[:n_select])
+    print(f"Selected {len(selected_indices)} indices from {n_total} total.")
+    print("Selected indices:", selected_indices)
+    return selected_indices
+
+
 class DefaultDataset(Dataset):
 
     def __init__(
@@ -37,7 +57,10 @@ class DefaultDataset(Dataset):
         file_path: str,
         tokenizer: AutoTokenizer | None = None,
         max_len: int | None = 4096,
-        add_bos_token: bool = True
+        add_bos_token: bool = True,
+        # forget_subset_indices: list[int] | None = None,
+        portion: float = 1.0,
+        rand_seed: int = 1
     ):
         if Path(file_path).suffix == '.json':
             with open(file_path, 'r') as f:
@@ -96,15 +119,36 @@ class DefaultDataset(Dataset):
                 [self.input_ids[-1], self.input_ids[0]], dim=-1
             )[:max_len]
 
-        if False:
-            main(
-                file_path,
-                Path(file_path).with_suffix('.csv')
-            )
-            # with open(index_file, 'r') as file:
-            #     select_indices = json.load(file)
+        # if forget_subset_indices is not None:
+        if portion < 1.0:
+            # main(
+            #     file_path,
+            #     Path(file_path).with_suffix('.csv')
+            # )
 
-            # self.input_ids = [self.input_ids[idx] for idx in select_indices]
+            print(f"Initial input_ids length: {len(self.input_ids)}")
+            # self.input_ids = [self.input_ids[idx] for idx in forget_subset_indices]
+            n_total = len(self.input_ids)
+            forget_subset_indices = load_forget_subset(n_total, portion, FORGET_SEED=rand_seed)
+            self.input_ids = [self.input_ids[idx] for idx in forget_subset_indices]
+            print(f"Using {len(self.input_ids)} input_ids from the forget subset indices.")
+            # name the file based on the portion and rand_seed and file_path:
+            sub_forget_file_address = pathjoin(dirname(file_path), f"forget_subset_{portion}_seed_{rand_seed}.csv") 
+            # save the subset_indices to a CSV file using forget_subset_indices as the index
+            with open(sub_forget_file_address, 'w', newline='', encoding='utf-8') as csvfile:
+                writer = csv.writer(csvfile)
+                writer.writerow(["id", "text"])
+                for idx, input_id in zip(forget_subset_indices, self.input_ids):
+                    text = tokenizer.decode(input_id, skip_special_tokens=True)
+                    writer.writerow([idx, text])
+
+            forget_indices_only = pathjoin(dirname(file_path), f"forget_indices_{portion}_seed_{rand_seed}.csv") 
+            # save the subset_indices to a CSV file using forget_subset_indices as the index
+            with open(forget_indices_only, 'w', newline='', encoding='utf-8') as csvfile:
+                writer = csv.writer(csvfile)
+                writer.writerow(["id"])
+                for idx in forget_subset_indices:
+                    writer.writerow([idx]) 
 
         # Original strings
         self.strings = tokenizer.batch_decode(self.input_ids, skip_special_tokens=True)
@@ -141,11 +185,14 @@ class ForgetRetainDataset(DefaultDataset):
         tokenizer: AutoTokenizer,
         retain_file_path: str | None = None,
         max_len: int = 4096,
-        add_bos_token: bool = True
+        add_bos_token: bool = True,
+        # forget_subset_indices: list[int] | None = None
+        portion: float = 1.0,
+        rand_seed: int = 1
     ):
         self.forget_dataset = DefaultDataset(
             forget_file_path, tokenizer,
-            max_len=max_len, add_bos_token=add_bos_token
+            max_len=max_len, add_bos_token=add_bos_token, portion=portion, rand_seed=rand_seed # forget_subset_indices=forget_subset_indices
         )
 
         self.retain_exists = retain_file_path is not None

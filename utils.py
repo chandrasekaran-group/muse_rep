@@ -10,6 +10,10 @@ def read_json(fpath: str) -> Dict | List:
     with open(fpath, 'r') as f:
         return json.load(f)
 
+def load_csv(fpath: str) -> pd.DataFrame:
+    print(f"Reading CSV from {fpath} ...")
+    return pd.read_csv(fpath)
+
 
 def read_text(fpath: str) -> str:
     with open(fpath, 'r') as f:

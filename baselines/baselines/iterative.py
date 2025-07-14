@@ -19,7 +19,10 @@ def unlearn(
     learning_rate=1e-5,
     max_len: int = 4096,
     tokenizer_dir: str | None = None,
-    resume_from_checkpoint: bool = False
+    resume_from_checkpoint: bool = False,
+    # forget_subset_indices: list[int] | None = None,
+    portion: float = 1.0,
+    rand_seed: int = 1
 ):
     if 'gd' in loss_type:
         assert retain_data_file is not None, "Retain data must be specified for grad_diff."
@@ -35,11 +38,27 @@ def unlearn(
         else None
     )
 
+
+    # --- Multi-GPU support ---
+    # n_gpus = torch.cuda.device_count()
+    # if n_gpus > 1:
+    #     print(f"Using {n_gpus} GPUs via DataParallel.")
+    #     model = torch.nn.DataParallel(model, device_ids=list(range(n_gpus)))
+    #     if ref_model is not None:
+    #         ref_model = torch.nn.DataParallel(ref_model, device_ids=list(range(n_gpus)))
+    # model = model.to('cuda' if torch.cuda.is_available() else 'cpu')
+    # if ref_model is not None:
+    #     ref_model = ref_model.to('cuda' if torch.cuda.is_available() else 'cpu')
+    # -------------------------
+
     dataset = ForgetRetainDataset(
         data_file,
         tokenizer=tokenizer,
         retain_file_path=retain_data_file,
-        max_len=max_len
+        max_len=max_len,
+        # forget_subset_indices=forget_subset_indices
+        portion=portion,
+        rand_seed=rand_seed
     )
 
     if device_count() == 0:
@@ -66,7 +85,17 @@ def unlearn(
         data_collator=dataset.get_collate_fn(),
         loss_type=loss_type
     )
+
+    # ------------------------------------
+    # If DataParallel, access config via .module
+    # if hasattr(model, "module"):
+    #     model.module.config.use_cache = False
+    # else:
+    #     model.config.use_cache = False  # silence the warnings.
+    # ------------------------------------
+
     model.config.use_cache = False  # silence the warnings.
+
     trainer.train(resume_from_checkpoint=resume_from_checkpoint)
     trainer.save_model(out_dir)
 

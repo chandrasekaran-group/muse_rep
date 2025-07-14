@@ -1,4 +1,4 @@
-from .logger import RougeEvalLogger
+from .logger import RougeEvalLogger, RougeEvalLogger_new
 
 from tqdm.contrib import tzip
 from typing import List
@@ -18,7 +18,7 @@ def eval(
     assert len(questions) == len(answers)
     assert len(icl_qs) == len(icl_as)
 
-    logger = RougeEvalLogger()
+    logger = RougeEvalLogger_new()
     general_prompt: str = ""
 
     # Few-shot prompting
@@ -47,7 +47,9 @@ def eval(
             skip_special_tokens=True,
             clean_up_tokenization_spaces=True)[0]
 
-        output = get_prefix_before_words_occur(output, ["\n\n", "\nQuestion", "Question:"])
-        logger.log(prompt, answer, output, question=question)
+        stripped_output = get_prefix_before_words_occur(output, ["\n\n", "\nQuestion", "Question:"])
+
+        # logger.log(prompt, answer, stripped_output, output, question=question)
+        logger.log(prompt, answer, stripped_output, output)
 
     return logger.report()

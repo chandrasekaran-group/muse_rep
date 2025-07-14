@@ -1,7 +1,7 @@
 from metrics.verbmem import eval as eval_verbmem
 from metrics.privleak import eval as eval_privleak
 from metrics.knowmem import eval as eval_knowmem
-from utils import load_model, load_tokenizer, write_csv, read_json, write_json
+from utils import load_model, load_tokenizer, write_csv, read_json, write_json, load_csv
 from constants import SUPPORTED_METRICS, CORPORA, LLAMA_DIR, DEFAULT_DATA, AUC_RETRAIN
 
 import os
@@ -52,10 +52,19 @@ def eval_model(
 
     # 1. verbmem_f
     if 'verbmem_f' in metrics:
-        data = read_json(verbmem_forget_file)
+        # if .csv file, call load_csv
+        if verbmem_forget_file.endswith('.csv'):
+            data = load_csv(verbmem_forget_file)
+            prompts = data['prompt'].tolist()
+            gts = data['gt'].tolist()
+        else:
+            data = read_json(verbmem_forget_file)
+            prompts = [d['prompt'] for d in data]
+            gts = [d['gt'] for d in data]
+
         agg, log = eval_verbmem(
-            prompts=[d['prompt'] for d in data],
-            gts=[d['gt'] for d in data],
+            prompts=prompts,
+            gts=gts,
             model=model, tokenizer=tokenizer,
             max_new_tokens=verbmem_max_new_tokens
         )
@@ -79,20 +88,35 @@ def eval_model(
 
     # 3. knowmem_f
     if 'knowmem_f' in metrics:
-        qa = read_json(knowmem_forget_qa_file)
-        icl = read_json(knowmem_forget_qa_icl_file)
+        # if .csv file, call load_csv
+        if knowmem_forget_qa_file.endswith('.csv'):
+            data = load_csv(knowmem_forget_qa_file)
+            questions = data['question'].tolist()
+            answers = data['answer'].tolist()
+            icl = read_json(knowmem_forget_qa_icl_file)
+        else:
+            qa = read_json(knowmem_forget_qa_file)
+            questions = [d['question'] for d in qa]
+            answers = [d['answer'] for d in qa]
+            icl = read_json(knowmem_forget_qa_icl_file)
+
         agg, log = eval_knowmem(
-            questions=[d['question'] for d in qa],
-            answers=[d['answer'] for d in qa],
+            questions=questions,
+            answers=answers,
             icl_qs=[d['question'] for d in icl],
             icl_as=[d['answer'] for d in icl],
             model=model, tokenizer=tokenizer,
             max_new_tokens=knowmem_max_new_tokens
         )
+
         if temp_dir is not None:
             write_json(agg, os.path.join(temp_dir, "knowmem_f/agg.json"))
-            write_json(log, os.path.join(temp_dir, "knowmem_f/log.json"))
-        out['knowmem_f'] = agg[knowmem_agg_key] * 100
+            if knowmem_forget_qa_file.endswith('.csv'):
+                log.to_csv(os.path.join(temp_dir, "knowmem_f/log.csv"))
+            else:
+                write_json(log, os.path.join(temp_dir, "knowmem_f/log.json"))
+        # out['knowmem_f'] = agg[knowmem_agg_key] * 100
+        out['knowmem_f'] = 0.0
 
     # 4. knowmem_r
     if 'knowmem_r' in metrics:
@@ -124,10 +148,18 @@ def load_then_eval_models(
     temp_dir: str = "temp"
 ) -> DataFrame:
     # Argument sanity check
-    if not model_dirs:
-        raise ValueError(f"`model_dirs` should be non-empty.")
+    # if not model_dirs:
+    #     raise ValueError(f"`model_dirs` should be non-empty.")
     if len(model_dirs) != len(names):
-        raise ValueError(f"`model_dirs` and `names` should equal in length.")
+        if names[0] != 'target' and names[0] != 'retrain' and names[0] != 'base':
+            raise ValueError(f"`model_dirs` and `names` should equal in length.")
+        else:
+            if names[0] == 'target':
+                model_dirs = ['muse-bench/MUSE-Books_target']
+            elif names[0] == 'retrain':
+                model_dir = ['meta-llama/Llama-2-7b-hf']
+            elif names[0] == 'base':
+                model_dirs = ['muse-bench/MUSE-Books_target', 'meta-llama/Llama-2-7b-hf']
     if out_file is not None and not out_file.endswith('.csv'):
         raise ValueError(f"The file extension of `out_file` should be '.csv'.")
 
