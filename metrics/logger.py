@@ -77,14 +77,14 @@ class RougeEvalLogger_new:
         # make a df and save to file:
         columns = [
             'prompt', 'expected_response', 'stripped_output', 'output',
-            'rougeL_fmeasure', 'rougeL_recall',
-            'rouge1_fmeasure', 'rouge1_recall'
+            'rougeL', 'rougeL_recall',
+            'rouge1', 'rouge1_recall'
         ]
         if len(self.history[0]) == 9:  # If question is included
             columns.append('question')
-            columns_subset = ['question', 'expected_response', 'stripped_output', 'rougeL_fmeasure', 'rougeL_recall', 'rouge1_fmeasure', 'rouge1_recall']
+            columns_subset = ['question', 'expected_response', 'stripped_output', 'rougeL', 'rougeL_recall', 'rouge1', 'rouge1_recall']
         else:
-            columns_subset = ['prompt', 'expected_response', 'stripped_output', 'rougeL_fmeasure', 'rougeL_recall', 'rouge1_fmeasure', 'rouge1_recall']
+            columns_subset = ['prompt', 'expected_response', 'stripped_output', 'rougeL', 'rougeL_recall', 'rouge1', 'rouge1_recall']
 
         history_df_short = pd.DataFrame(self.history, columns=columns)
         history_df_short = history_df_short[columns_subset]
@@ -94,8 +94,8 @@ class RougeEvalLogger_new:
     def report(self) -> Tuple[Dict, Dict]:
         columns = [
             'prompt', 'expected_response', 'stripped_output', 'output',
-            'rougeL_fmeasure', 'rougeL_recall',
-            'rouge1_fmeasure', 'rouge1_recall'
+            'rougeL', 'rougeL_recall',
+            'rouge1', 'rouge1_recall'
         ]
         if len(self.history[0]) == 9:  # If question is included
             columns.append('question')
@@ -104,9 +104,9 @@ class RougeEvalLogger_new:
         agg = {}
         # compute aggregate statistics for rouge columns
         for key in [
-            'rougeL_fmeasure',
+            'rougeL',
             'rougeL_recall',
-            'rouge1_fmeasure',
+            'rouge1',
             'rouge1_recall'
         ]:
             vals: List[float] = history_df[key].tolist()

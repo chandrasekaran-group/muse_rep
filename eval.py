@@ -115,8 +115,7 @@ def eval_model(
                 log.to_csv(os.path.join(temp_dir, "knowmem_f/log.csv"))
             else:
                 write_json(log, os.path.join(temp_dir, "knowmem_f/log.json"))
-        # out['knowmem_f'] = agg[knowmem_agg_key] * 100
-        out['knowmem_f'] = 0.0
+        out['knowmem_f'] = agg[knowmem_agg_key] * 100
 
     # 4. knowmem_r
     if 'knowmem_r' in metrics:
