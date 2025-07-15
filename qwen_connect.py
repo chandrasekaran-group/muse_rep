@@ -3,11 +3,10 @@ import requests
 import json
 
 
-def get_openai_client():
+def get_openai_client(key):
     return OpenAI(
         base_url="https://openrouter.ai/api/v1",
-        # api_key="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",
-        api_key="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",
+        api_key=key,
     )
 
 def get_response_from_openai(client, prompt):
@@ -31,11 +30,11 @@ def get_response_from_openai(client, prompt):
     return response
 
 
-def get_response_direct(prompt):
+def get_response_direct(key, prompt):
     response = requests.post(
       url="https://openrouter.ai/api/v1/chat/completions",
       headers={
-        "Authorization": "Bearer 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",
+        "Authorization": f"Bearer {key}",
         "Content-Type": "application/json",
         "HTTP-Referer": "<YOUR_SITE_URL>", # Optional. Site URL for rankings on openrouter.ai.
         "X-Title": "<YOUR_SITE_NAME>", # Optional. Site title for rankings on openrouter.ai.
@@ -55,11 +54,11 @@ def get_response_direct(prompt):
     return response
 
 
-def check_limitations():
+def check_limitations(key):
     response = requests.get(
         url="https://openrouter.ai/api/v1/auth/key",
         headers={
-            "Authorization": "Bearer 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",
+            "Authorization": f"Bearer {key}",
         }
     )
     print(json.dumps(response.json(), indent=2))
