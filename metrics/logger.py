@@ -88,7 +88,8 @@ class RougeEvalLogger_new:
 
         history_df_short = pd.DataFrame(self.history, columns=columns)
         history_df_short = history_df_short[columns_subset]
-        history_df_short.to_csv('/scratch/aebrahim/muse_rep/temp/books_df_short.csv', index=False)
+        # history_df_short.to_csv('/scratch/aebrahim/muse_rep/temp/books_df_combined_short.csv', index=False)
+        history_df_short.to_csv('/scratch/aebrahim/muse_rep/temp/books_df_orig_short.csv', index=False)
         
 
     def report(self) -> Tuple[Dict, Dict]:

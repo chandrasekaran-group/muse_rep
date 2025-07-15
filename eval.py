@@ -116,10 +116,10 @@ def eval_model(
 
         if temp_dir is not None:
             write_json(agg, os.path.join(temp_dir, "knowmem_f/agg.json"))
-            if knowmem_forget_qa_file.endswith('.csv'):
-                log.to_csv(os.path.join(temp_dir, "knowmem_f/log.csv"))
-            else:
-                write_json(log, os.path.join(temp_dir, "knowmem_f/log.json"))
+            # if knowmem_forget_qa_file.endswith('.csv'):
+            log.to_csv(os.path.join(temp_dir, "knowmem_f/log.csv"))
+            # else:
+            #     write_json(log, os.path.join(temp_dir, "knowmem_f/log.json"))
         out['knowmem_f'] = agg[knowmem_agg_key] * 100
 
     # 4. knowmem_r
@@ -136,7 +136,8 @@ def eval_model(
         )
         if temp_dir is not None:
             write_json(agg, os.path.join(temp_dir, "knowmem_r/agg.json"))
-            write_json(log, os.path.join(temp_dir, "knowmem_r/log.json"))
+            # write_json(log, os.path.join(temp_dir, "knowmem_r/log.json"))
+            log.to_csv(os.path.join(temp_dir, "knowmem_r/log.json"), index=False)
         out['knowmem_r'] = agg[knowmem_agg_key] * 100
 
     return out

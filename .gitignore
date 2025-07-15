@@ -7,3 +7,4 @@ internal
 **/.vscode
 data
 temp/*
+*.csv
