@@ -102,14 +102,22 @@ class RougeEvalLogger_new:
         history_df = pd.DataFrame(self.history, columns=columns)
 
         agg = {}
-        # for idx, row in history_df.items():
-        #     vals: List[float] = [item[key] for item in self.history]
-        #     agg[f"max_{key}"] = max(vals)
-        #     agg[f"mean_{key}"] = sum(vals) / len(vals)
-        #     agg[f"{key}_ci_lo"], agg[f"{key}_ci_hi"] = bootstrap(
-        #         (vals,), np.mean,
-        #         confidence_level=0.95,
-        #         method='percentile'
-        #     ).confidence_interval
-        
+        # compute aggregate statistics for rouge columns
+        for key in [
+            'rougeL_fmeasure',
+            'rougeL_recall',
+            'rouge1_fmeasure',
+            'rouge1_recall'
+        ]:
+            vals: List[float] = history_df[key].tolist()
+            agg[f"max_{key}"] = max(vals)
+            agg[f"mean_{key}"] = sum(vals) / len(vals)
+            ci = bootstrap(
+                (vals,),
+                np.mean,
+                confidence_level=0.95,
+                method='percentile'
+            ).confidence_interval
+            agg[f"{key}_ci_lo"], agg[f"{key}_ci_hi"] = ci
+
         return agg, history_df
