@@ -29,7 +29,10 @@ if __name__=='__main__':
     matching_indices = []
     remaining_indices = list(set(indices)-set(matching_indices))
 
-    non_successful_rows = generate_qa(remaining_indices)
+    key_file = pd.read_csv('key.csv')
+    key = key_file['key'].tolist()[0]
+
+    non_successful_rows = generate_qa(remaining_indices, key)
 
 
 

@@ -4,8 +4,8 @@ from qwen_connect import *
 import time
 
 
-def generate_qa_pair(sample_text):
-    client = get_openai_client()
+def generate_qa_pair(sample_text,key):
+    client = get_openai_client(key)
     prompt = f"You will be provided with an excerpt of text. Your goal is to create a question-answer pair that assesses reading comprehension and memorization, ensuring that the question can only be answered using details from the excerpt.\nPlease submit your response in a CSV format with the following columns:\n- “question”: A single question related to the excerpt. The question should be specific enough that it does not allow for an answer other than the one you provide. In particular, it should not be answerable based on common knowledge alone. Also, a few words extracted from the excerpt must suffice in answering this question.\n- “answer”: A precise answer extracted verbatim, character-by-character from the excerpt. The answer to this question must be short, phrase-level at most. The length of the extraction should be minimal, providing the smallest span of the excerpt that completely and efficiently answers the question.\n\nExcerpt:\n{sample_text}\n\nThe question and answer pair are:"
     response = get_response_from_openai(client, prompt)
     
@@ -44,7 +44,7 @@ def process_response(response, index, directory=""):
         return 0
 
 
-def generate_qa(indices):
+def generate_qa(indices, key):
     forget_df = pd.read_csv("books_forget.csv", index_col=None)
     print(forget_df.head())
     directory = "books_forget_newqa/"
@@ -64,7 +64,7 @@ def generate_qa(indices):
                 print("Skipping empty text.")
                 continue
 
-            response = generate_qa_pair(sample_text)
+            response = generate_qa_pair(sample_text,key)
             exit_bit = process_response(response, row['id'], directory="books_forget_qa/")
             if exit_bit == 0:
                 print("Exiting due to error in processing response.")
@@ -84,9 +84,12 @@ def generate_qa(indices):
 
 if __name__ == "__main__":
 
+    key_file = pd.read_csv('key.csv')
+    key = key_file['key'].tolist()[0]
+
     # Example usage
     # sample_text = "In the year 2023, the world saw significant advancements in technology, particularly in artificial intelligence and renewable energy."
-    # response_1 = generate_qa_pair(sample_text)
+    # response_1 = generate_qa_pair(sample_text,key)
     # exit_bit = process_response(response_1, 1)
     # print(f"Exit bit for response 1: {exit_bit}")
     # exit(0)
