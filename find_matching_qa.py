@@ -4,6 +4,7 @@ from transformers import AutoModelForCausalLM, AutoTokenizer
 from generate_qa import generate_qa
 from typing import List
 from utils import load_model, load_tokenizer, write_csv, read_json, write_json, load_csv
+import torch
 
 
 def compute_matching_indices(log_csv: str) -> list[int]:
@@ -19,9 +20,10 @@ def compute_matching_indices(log_csv: str) -> list[int]:
     return matches
 
 
-def load_hf_model(model_name: str, tokenizer_name):
+def load_hf_model(model_name: str, tokenizer_name, device):
     tokenizer = AutoTokenizer.from_pretrained(tokenizer_name)
     model = AutoModelForCausalLM.from_pretrained(model_name)
+    model = model.to(device)
     return model, tokenizer
 
 
@@ -90,22 +92,27 @@ def verify_pairs(model, tokenizer, qa_dir: str, indices: list[int]) -> list[int]
         print('\n----------- verifying: ', path)
         if not os.path.exists(path):
             continue
-        df = pd.read_csv(path)
-        if df.empty:
+
+        try:
+            df = pd.read_csv(path)
+            if df.empty:
+                continue
+            for i in range(len(df)):
+                question = str(df.iloc[i]["question"])
+                print('\n', i, question)
+                expected = str(df.iloc[i]["answer"])
+                response = query_model(
+                    model, tokenizer, question,
+                    icl_qs=[d['question'] for d in icl],
+                    icl_as=[d['answer'] for d in icl]
+                )
+                print('response: ', response, '     expected: ', expected)
+                if response == expected:
+                    matched.append([idx, i])
+                    print('==================== found a match! =======================')
+        except:
+            print('problem with verifying the file...')
             continue
-        for i in range(len(df)):
-            question = str(df.iloc[i]["question"])
-            print('\n', i, question)
-            expected = str(df.iloc[i]["answer"])
-            response = query_model(
-                model, tokenizer, question,
-                icl_qs=[d['question'] for d in icl],
-                icl_as=[d['answer'] for d in icl]
-            )
-            print('response: ', response, '     expected: ', expected)
-            if response == expected:
-                matched.append([idx, i])
-                print('found a match!')
     return matched
 
 
@@ -118,38 +125,55 @@ def main(
 
     print('key: ', key)
 
-    max_id = 3
+    max_id = 553
+    considering_count = 553
+
     # indices = list(range(553))
     indices = list(range(max_id))
 
-    model, tokenizer = load_hf_model(model_name, tokenizer_name)
+    device = 'cuda' if torch.cuda.is_available() else 'cpu'
+    model, tokenizer = load_hf_model(model_name, tokenizer_name, device=device)
     matches = verify_pairs(model, tokenizer, qa_dir, indices)
     match_df = pd.DataFrame(matches, columns=['chunk_idx', 'q_idx'])
+    match_df.to_csv("initial_matching_qas.csv", index=False)
     matching_indices = list(match_df['chunk_idx'].values)
     print(matching_indices)
 
-    remaining_indices = sorted(set(indices) - set(matching_indices))
-    exit(0)
+    remaining_indices = sorted(set(indices) - set(matching_indices))[:considering_count]
+    print(remaining_indices)
 
+    qa_dir = "books_forget_newqa/"
+    try_counter = 0
     while remaining_indices:
         # Generate questions for remaining indices
         generate_qa(remaining_indices, key)
-
-        # Load model for verification
-        model, tokenizer = load_hf_model(model_name, tokenizer_name)
-
         new_matches = verify_pairs(model, tokenizer, qa_dir, remaining_indices)
-        if not new_matches:
+
+        matches += new_matches
+        match_df = pd.DataFrame(matches, columns=['chunk_idx', 'q_idx'])
+        new_indices = list(match_df['chunk_idx'].values)
+        if not new_indices:
+            new_indices = []
+        print('new matching indices: ', new_indices)
+        matching_indices.extend(new_indices)
+        matching_indices = list(set(matching_indices))
+        print('all matching indices: ', matching_indices)
+        remaining_indices = [i for i in remaining_indices if i not in new_indices]
+        print('remaining indices: ', remaining_indices)
+        match_df.to_csv("matching_qas.csv")
+
+        try_counter += 1
+        if try_counter >= 5:
             break
-        matching_indices.extend(new_matches)
-        remaining_indices = [i for i in remaining_indices if i not in new_matches]
-        pd.DataFrame({"idx": matching_indices}).to_csv("matching_indices.csv", index=False)
 
     return matching_indices
 
 
 if __name__ == "__main__":
     import argparse
+
+    a = [1,2,3]
+    a.extend([2,3,4])
 
     parser = argparse.ArgumentParser(description="Find matching QA pairs")
     parser.add_argument("analysis_csv", help="CSV file produced by evaluation")

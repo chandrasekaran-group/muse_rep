@@ -65,7 +65,7 @@ def generate_qa(indices, key):
                 continue
 
             response = generate_qa_pair(sample_text,key)
-            exit_bit = process_response(response, row['id'], directory="books_forget_qa/")
+            exit_bit = process_response(response, row['id'], directory=directory)
             if exit_bit == 0:
                 print("Exiting due to error in processing response.")
                 non_successful_rows.append((row['id'], sample_text, response))
@@ -76,7 +76,7 @@ def generate_qa(indices, key):
                 break
             else:
                 non_successful_rows.append((row['id'], sample_text, 'Error: ' + str(e)))
-        time.sleep(20)  # Sleep for 60 seconds to avoid hitting rate limits
+        time.sleep(10)  # Sleep for 60 seconds to avoid hitting rate limits
 
     return non_successful_rows
 
