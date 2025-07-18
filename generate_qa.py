@@ -6,7 +6,7 @@ import time
 
 def generate_qa_pair(sample_text,key):
     client = get_openai_client(key)
-    prompt = f"You will be provided with an excerpt of text. Your goal is to create a question-answer pair that assesses reading comprehension and memorization, ensuring that the question can only be answered using details from the excerpt.\nPlease submit your response in a CSV format with the following columns:\n- “question”: A single question related to the excerpt. The question should be specific enough that it does not allow for an answer other than the one you provide. In particular, it should not be answerable based on common knowledge alone. Also, a few words extracted from the excerpt must suffice in answering this question.\n- “answer”: A precise answer extracted verbatim, character-by-character from the excerpt. The answer to this question must be short, phrase-level at most. The length of the extraction should be minimal, providing the smallest span of the excerpt that completely and efficiently answers the question.\n\nExcerpt:\n{sample_text}\n\nThe question and answer pair are:"
+    prompt = f"You will be provided with an excerpt of text. Your goal is to create a question-answer pair that assesses reading comprehension and memorization, ensuring that the question can only be answered by one or two words using details from the excerpt.\nPlease submit your response in a CSV format with the following columns:\n- “question”: A single question related to the excerpt. The question should be specific enough that it does not allow for an answer other than the one you provide. In particular, it should not be answerable based on common knowledge alone. Also, a few words extracted from the excerpt must suffice in answering this question, but the question should not be a yes-no question. \n- “answer”: A precise answer extracted verbatim, character-by-character from the excerpt. The answer to this question must be short, phrase-level at most. The length of the extraction should be minimal, providing the smallest span of the excerpt that completely and efficiently answers the question.\n\nExcerpt:\n{sample_text}\n\nThe question and answer pair are:"
     response = get_response_from_openai(client, prompt)
     
     return response
@@ -73,12 +73,12 @@ def generate_qa(indices, key):
             print(f"An error occurred while processing row {row['id']}: {e}")
             if type(e).__name__ == 'RateLimitError':
                 print("Rate limit exceeded. Exiting the loop.")
-                break
+                return False
             else:
                 non_successful_rows.append((row['id'], sample_text, 'Error: ' + str(e)))
         time.sleep(10)  # Sleep for 60 seconds to avoid hitting rate limits
 
-    return non_successful_rows
+    return True
 
 
 

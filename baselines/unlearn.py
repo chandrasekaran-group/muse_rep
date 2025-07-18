@@ -24,92 +24,8 @@ else:
     print("CUDA is not available. PyTorch is likely using CPU.")
 
 
-# def load_forget_subset(data_file, portion, FORGET_SEED=42):
-#     """
-#     Loads a portion of the forget set, using a fixed random seed.
-#     The smaller portions are always subsets of larger portions.
-#     """
-#     data_df = pd.read_csv(data_file)
-#     n_total = len(data_df)
-#     # n_select = int(n_total * portion)
-#     random.seed(FORGET_SEED)
-#     np.random.seed(FORGET_SEED)
-#     indices = list(range(n_total))
-#     random.shuffle(indices)
-#     n_select = max(1, int(n_total * portion))
-#     selected_indices = sorted(indices[:n_select])
-#     print(f"Selected {len(selected_indices)} indices from {n_total} total.")
-#     print("Selected indices:", selected_indices)
-#     return selected_indices
-# 
-# 
-# def chunk_tokens(tokens, chunk_size):
-#     for i in range(0, len(tokens), chunk_size):
-#         yield tokens[i:i + chunk_size]
-# 
-# 
-# def get_sub_text(csvfile, indices):
-#     df = pd.read_csv(csvfile)
-#     df_sub = df[df['id'].isin(indices)]
-#     print(len(df_sub), "rows in subset CSV.")
-#     rebuilt_text = " ".join(df_sub['text'].tolist())
-# 
-#     tokenizer = AutoTokenizer.from_pretrained("meta-llama/Llama-2-7b-hf")
-#     tokens = tokenizer.encode(rebuilt_text)
-#     chunks = list(chunk_tokens(tokens, 2048))
-#     print(len(chunks), "chunks from rebuilt text.")
-# 
-#     if len(chunks) > len(df_sub):
-#         print('len of chunks:', len(chunks), 'is greater than len of subset CSV:', len(df_sub))
-#         if len(chunks) > len(df_sub) + 1:
-#             print("Warning: More chunks than rows in subset CSV. This might indicate an issue with chunking.")
-# 
-#     decoded_chunks = [tokenizer.decode(chunk).strip() for chunk in chunks[:len(df_sub)]]
-#     decoded_chunks[0] = decoded_chunks[0].replace("<s>", "").strip()  # Remove <s> token if present
-#     rebuilt_text = " ".join(decoded_chunks)
-# 
-#     tokens_new = tokenizer.encode(rebuilt_text)
-#     chunks_new = list(chunk_tokens(tokens_new, 2048))
-#     print(len(chunks_new), "new chunks from rebuilt text.")
-#     strip_size = 5  # Adjust this size as needed
-#     while len(chunks_new) > len(df_sub):
-#         print("Still more chunks than rows in subset CSV after rebuilding text. This might indicate an issue with chunking.")
-#         decoded_chunks[-1] = decoded_chunks[-1][:-strip_size]  # Strip the last few characters
-#         rebuilt_text = " ".join(decoded_chunks)
-# 
-#         tokens_new = tokenizer.encode(rebuilt_text)
-#         chunks_new = list(chunk_tokens(tokens_new, 2048))
-#         print(len(chunks_new), "new chunks from rebuilt text after stripping.")
-#         strip_size += 5  # Increase the strip size to ensure we eventually match the number of rows
-# 
-#     return rebuilt_text
-
-
 def main():
     args = get_args()
-
-    # Portion of forget set to use
-    # if hasattr(args, 'forget_portion') and args.forget_portion < 1.0:
-    #     forget_subset_indices = load_forget_subset(args.data_file, args.forget_portion, FORGET_SEED=args.seed)
-
-    #     """
-    #     # Save the subset to a temporary file for downstream use
-    #     sub_forget_file_address = pathjoin(dirname(args.data_file), f"forget_subset_{args.forget_portion}_seed_{args.seed}.txt") 
-    #     text_subset = get_sub_text(args.data_file, forget_subset_indices)
-    #     with open(sub_forget_file_address, "w", encoding="utf-8") as f:
-    #         f.write(text_subset)
-    #     time.sleep(5)  # Ensure the file is written before proceeding
-    #     forget_data_file = sub_forget_file_address
-    #     args.data_file = forget_data_file
-    #     print(f"Forget subset saved to {sub_forget_file_address}")
-    #     """
-
-    #     # save indices to a csv file for reference
-    #     indices_df = pd.DataFrame({'id': forget_subset_indices})
-    #     indices_df.to_csv(pathjoin(dirname(args.data_file), f"forget_subset_indices_{args.forget_portion}_seed_{args.seed}.csv"), index=False)
-    # else:
-    #     forget_data_file = args.data_file
-    #     forget_subset_indices = None
 
     if args.algo == 'kn':
         raise NotImplementedError()
@@ -124,6 +40,7 @@ def main():
             max_len=args.max_len,
             tokenizer_dir=args.tokenizer_dir,
             portion=args.forget_portion,
+            exclude_file=args.match_file,
             rand_seed=args.seed
         )
         tv_unlearn(
@@ -146,6 +63,7 @@ def main():
             resume_from_checkpoint=args.resume_from_checkpoint,
             # forget_subset_indices=forget_subset_indices,
             portion=args.forget_portion,
+            exclude_file=args.match_file,
             rand_seed=args.seed
         )
 
@@ -183,6 +101,11 @@ def get_args():
     parser.add_argument(
         '--forget_portion', type=float, default=1.0,
         help="Portion of the forget set to use for unlearning (0 < portion <= 1.0)."
+    )
+
+    parser.add_argument(
+        '--match_file', type=str, default='/scratch/aebrahim/muse_rep/matching_qa_pairs_combined.csv',
+        help="Path to the matching file to exclude their indices when portion < 1.0"
     )
 
     parser.add_argument(

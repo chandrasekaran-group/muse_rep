@@ -12,6 +12,7 @@ import csv
 import random
 import numpy as np
 from os.path import basename, dirname, join as pathjoin
+import pandas as pd
 
 
 def chunk_tokens(tokens, chunk_size):
@@ -33,15 +34,23 @@ def main(txt_path, csv_path):
             writer.writerow([idx, chunk_text])
 
 
-def load_forget_subset(n_total, portion, FORGET_SEED=42):
+def load_forget_subset(n_total, portion, exclude_file, FORGET_SEED=42):
     """
     Loads a portion of the forget set, using a fixed random seed.
     The smaller portions are always subsets of larger portions.
     """
     # n_select = int(n_total * portion)
+    if exclude_file is not None:
+        match_df = pd.read_csv(exclude_file)
+        exclude_ids = list(match_df['id'].values)
+        print('excluding ids: ', exclude_ids)
+    else:
+        exclude_ids = []
+
     random.seed(FORGET_SEED)
     np.random.seed(FORGET_SEED)
-    indices = list(range(n_total))
+    indices = list(set(list(range(n_total))) - set(exclude_ids))
+    print("number of remaining indices to choose from: ", len(indices))
     random.shuffle(indices)
     n_select = max(1, int(n_total * portion))
     selected_indices = sorted(indices[:n_select])
@@ -60,6 +69,7 @@ class DefaultDataset(Dataset):
         add_bos_token: bool = True,
         # forget_subset_indices: list[int] | None = None,
         portion: float = 1.0,
+        exclude_file: str | None = None,
         rand_seed: int = 1
     ):
         if Path(file_path).suffix == '.json':
@@ -119,6 +129,7 @@ class DefaultDataset(Dataset):
                 [self.input_ids[-1], self.input_ids[0]], dim=-1
             )[:max_len]
 
+        print('total forget chunks: ', len(self.input_ids))
         # if forget_subset_indices is not None:
         if portion < 1.0:
             # main(
@@ -129,7 +140,17 @@ class DefaultDataset(Dataset):
             print(f"Initial input_ids length: {len(self.input_ids)}")
             # self.input_ids = [self.input_ids[idx] for idx in forget_subset_indices]
             n_total = len(self.input_ids)
-            forget_subset_indices = load_forget_subset(n_total, portion, FORGET_SEED=rand_seed)
+
+            if 'news' in file_path:
+                print('forget file is set to news!')
+                print(file_path)
+                n_total = 553
+                exclude_file = None
+
+            forget_subset_indices = load_forget_subset(n_total, portion, exclude_file, FORGET_SEED=rand_seed)
+            if 'news' in file_path:
+                forget_subset_indices = list(range(min(len(forget_subset_indices), len(self.input_ids))))
+
             self.input_ids = [self.input_ids[idx] for idx in forget_subset_indices]
             print(f"Using {len(self.input_ids)} input_ids from the forget subset indices.")
             # name the file based on the portion and rand_seed and file_path:
@@ -188,11 +209,12 @@ class ForgetRetainDataset(DefaultDataset):
         add_bos_token: bool = True,
         # forget_subset_indices: list[int] | None = None
         portion: float = 1.0,
+        exclude_file: str | None = None,
         rand_seed: int = 1
     ):
         self.forget_dataset = DefaultDataset(
             forget_file_path, tokenizer,
-            max_len=max_len, add_bos_token=add_bos_token, portion=portion, rand_seed=rand_seed # forget_subset_indices=forget_subset_indices
+            max_len=max_len, add_bos_token=add_bos_token, portion=portion, exclude_file=exclude_file, rand_seed=rand_seed # forget_subset_indices=forget_subset_indices
         )
 
         self.retain_exists = retain_file_path is not None

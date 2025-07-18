@@ -22,6 +22,7 @@ def unlearn(
     resume_from_checkpoint: bool = False,
     # forget_subset_indices: list[int] | None = None,
     portion: float = 1.0,
+    exclude_file: str | None = None,
     rand_seed: int = 1
 ):
     if 'gd' in loss_type:
@@ -58,6 +59,7 @@ def unlearn(
         max_len=max_len,
         # forget_subset_indices=forget_subset_indices
         portion=portion,
+        exclude_file=exclude_file,
         rand_seed=rand_seed
     )
 

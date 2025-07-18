@@ -118,7 +118,7 @@ def verify_pairs(model, tokenizer, qa_dir: str, indices: list[int]) -> list[int]
 
 def main(
     key,
-    qa_dir: str = "books_forget_qa",
+    qa_dir: str = "books_forget_matching_qas",
     model_name: str = "muse-bench/MUSE-Books_target",
     tokenizer_name: str = "meta-llama/Llama-2-7b-hf"
 ):
@@ -146,7 +146,10 @@ def main(
     try_counter = 0
     while remaining_indices:
         # Generate questions for remaining indices
-        generate_qa(remaining_indices, key)
+        gen_flag = generate_qa(remaining_indices, key)
+        if not gen_flag:
+            print('Exiting due to rate limit of Qwen!')
+            break
         new_matches = verify_pairs(model, tokenizer, qa_dir, remaining_indices)
 
         matches += new_matches
@@ -176,8 +179,7 @@ if __name__ == "__main__":
     a.extend([2,3,4])
 
     parser = argparse.ArgumentParser(description="Find matching QA pairs")
-    parser.add_argument("analysis_csv", help="CSV file produced by evaluation")
-    parser.add_argument("--qa_dir", default="books_forget_qa", help="Directory containing QA csv files")
+    parser.add_argument("--qa_dir", default="books_forget_matching_qas", help="Directory containing QA csv files")
     parser.add_argument("--model", default="muse-bench/MUSE-Books_target", help="Model name on HuggingFace")
     args = parser.parse_args()
 
