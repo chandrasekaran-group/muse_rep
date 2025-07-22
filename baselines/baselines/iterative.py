@@ -23,7 +23,8 @@ def unlearn(
     # forget_subset_indices: list[int] | None = None,
     portion: float = 1.0,
     exclude_file: str | None = None,
-    rand_seed: int = 1
+    rand_seed: int = 1,
+    upsampling: float = 1.0
 ):
     if 'gd' in loss_type:
         assert retain_data_file is not None, "Retain data must be specified for grad_diff."
@@ -60,7 +61,8 @@ def unlearn(
         # forget_subset_indices=forget_subset_indices
         portion=portion,
         exclude_file=exclude_file,
-        rand_seed=rand_seed
+        rand_seed=rand_seed,
+        upsampling=upsampling
     )
 
     if device_count() == 0:

@@ -41,7 +41,8 @@ def main():
             tokenizer_dir=args.tokenizer_dir,
             portion=args.forget_portion,
             exclude_file=args.match_file,
-            rand_seed=args.seed
+            rand_seed=args.seed,
+            upsampling=args.upsample
         )
         tv_unlearn(
             args.model_dir, args.out_dir,
@@ -64,7 +65,8 @@ def main():
             # forget_subset_indices=forget_subset_indices,
             portion=args.forget_portion,
             exclude_file=args.match_file,
-            rand_seed=args.seed
+            rand_seed=args.seed,
+            upsampling=args.upsample
         )
 
     return;
@@ -111,6 +113,11 @@ def get_args():
     parser.add_argument(
         '--seed', type=int, default=1,
         help="Random seed for reproducibility. Defaults to 1."
+    )
+
+    parser.add_argument(
+        '--upsample', type=float, default=1.0,
+        help="Upsampling ratio for the forget set."
     )
 
     # Gradient ascent & Gradient difference
