@@ -24,7 +24,7 @@ def unlearn(
     portion: float = 1.0,
     exclude_file: str | None = None,
     rand_seed: int = 1,
-    upsampling: int = 1
+    upsampling: float = 1.0
 ):
     if 'gd' in loss_type:
         assert retain_data_file is not None, "Retain data must be specified for grad_diff."

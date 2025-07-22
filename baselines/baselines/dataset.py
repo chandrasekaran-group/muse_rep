@@ -70,7 +70,7 @@ class DefaultDataset(Dataset):
         portion: float = 1.0,
         exclude_file: str | None = None,
         rand_seed: int = 1,
-        upsampling: int = 1
+        upsampling: float = 1.0
     ):
         if Path(file_path).suffix == '.json':
             with open(file_path, 'r') as f:
@@ -171,9 +171,18 @@ class DefaultDataset(Dataset):
                 for idx in forget_subset_indices:
                     writer.writerow([idx])
 
-        if upsampling > 1:
-            self.input_ids = self.input_ids * int(upsampling)
-            print(f"Upsampled forget set by a factor of {upsampling}. New length: {len(self.input_ids)}")
+        if upsampling > 1.0:
+            rng = random.Random(rand_seed + 1234)
+            original_len = len(self.input_ids)
+            target_len = int(round(original_len * upsampling))
+            extra = target_len - original_len
+            if extra > 0:
+                extra_indices = rng.choices(range(original_len), k=extra)
+                self.input_ids.extend([self.input_ids[i].clone() for i in extra_indices])
+            print(
+                f"Upsampled forget set from {original_len} to {len(self.input_ids)} "
+                f"using ratio {upsampling}."
+            )
 
         # Original strings
         self.strings = tokenizer.batch_decode(self.input_ids, skip_special_tokens=True)
@@ -214,7 +223,7 @@ class ForgetRetainDataset(DefaultDataset):
         portion: float = 1.0,
         exclude_file: str | None = None,
         rand_seed: int = 1,
-        upsampling: int = 1
+        upsampling: float = 1.0
     ):
         self.forget_dataset = DefaultDataset(
             forget_file_path, tokenizer,

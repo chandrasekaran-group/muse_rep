@@ -16,7 +16,7 @@ def finetune(
     portion: float = 1.0,
     exclude_file: str | None = None,
     rand_seed: int = 1,
-    upsampling: int = 1
+    upsampling: float = 1.0
 ):
     model, tokenizer = load_model_and_tokenizer(
         model_dir,

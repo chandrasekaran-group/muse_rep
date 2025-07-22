@@ -116,7 +116,7 @@ def get_args():
     )
 
     parser.add_argument(
-        '--upsample', type=int, default=1,
+        '--upsample', type=float, default=1.0,
         help="Upsampling ratio for the forget set."
     )
 
