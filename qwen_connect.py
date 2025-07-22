@@ -17,7 +17,8 @@ def get_response_from_openai(client, prompt):
         "X-Title": "<YOUR_SITE_NAME>", # Optional. Site title for rankings on openrouter.ai.
       },
       extra_body={},
-      model="qwen/qwq-32b:free",
+      # model="qwen/qwq-32b:free",
+      model="qwen/qwen3-235b-a22b-07-25:free",
       messages=[
         {
           "role": "user",
@@ -40,7 +41,8 @@ def get_response_direct(key, prompt):
         "X-Title": "<YOUR_SITE_NAME>", # Optional. Site title for rankings on openrouter.ai.
       },
       data=json.dumps({
-        "model": "qwen/qwq-32b:free",
+        # "model": "qwen/qwq-32b:free",
+        "model": "qwen/qwen3-235b-a22b-07-25:free",
         "messages": [
           {
             "role": "user",

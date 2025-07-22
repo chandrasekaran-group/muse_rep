@@ -6,7 +6,8 @@ import time
 
 def generate_qa_pair(sample_text,key):
     client = get_openai_client(key)
-    prompt = f"You will be provided with an excerpt of text. Your goal is to create a question-answer pair that assesses reading comprehension and memorization, ensuring that the question can only be answered by one or two words using details from the excerpt.\nPlease submit your response in a CSV format with the following columns:\n- “question”: A single question related to the excerpt. The question should be specific enough that it does not allow for an answer other than the one you provide. In particular, it should not be answerable based on common knowledge alone. Also, a few words extracted from the excerpt must suffice in answering this question, but the question should not be a yes-no question. \n- “answer”: A precise answer extracted verbatim, character-by-character from the excerpt. The answer to this question must be short, phrase-level at most. The length of the extraction should be minimal, providing the smallest span of the excerpt that completely and efficiently answers the question.\n\nExcerpt:\n{sample_text}\n\nThe question and answer pair are:"
+    # prompt = f"You will be provided with an excerpt of text. Your goal is to create a question-answer pair that assesses reading comprehension and memorization, ensuring that the question can only be answered by one or two words using details from the excerpt.\nPlease submit your response in a CSV format with the following columns:\n- “question”: A single question related to the excerpt. The question should be specific enough that it does not allow for an answer other than the one you provide. In particular, it should not be answerable based on common knowledge alone. Also, a few words extracted from the excerpt must suffice in answering this question, but the question should not be a yes-no question. \n- “answer”: A precise answer extracted verbatim, character-by-character from the excerpt. The answer to this question must be short, phrase-level at most. The length of the extraction should be minimal, providing the smallest span of the excerpt that completely and efficiently answers the question.\n\nExcerpt:\n{sample_text}\n\nThe question and answer pair are:"
+    prompt = f"You will be provided with an excerpt of text. Your goal is to create multiple question-answer pairs that assess reading comprehension and memorization, ensuring that the questions can only be answered by one or two words using details from the excerpt.\nPlease submit your response in a CSV format with the following columns:\n- “question”: A single question related to the excerpt in each row. Each question should be specific enough that it does not allow for an answer other than the corresponding one you provide. In particular, it should not be answerable based on common knowledge alone. Also, a few words extracted from the excerpt must suffice in answering this question, but the question should not be a yes-no question. \n- “answer”: A precise answer extracted verbatim, character-by-character from the excerpt. The answer to each question in that row must be short, phrase-level at most. The length of the extraction should be minimal, providing the smallest span of the excerpt that completely and efficiently answers the question.\n\nExcerpt:\n{sample_text}\n\nThe question and answer pair are:"
     response = get_response_from_openai(client, prompt)
     
     return response
@@ -44,7 +45,7 @@ def process_response(response, index, directory=""):
         return 0
 
 
-def generate_qa(indices, key):
+def generate_qa(indices, key, sleep_time=10):
     forget_df = pd.read_csv("books_forget.csv", index_col=None)
     print(forget_df.head())
     directory = "books_forget_newqa/"
@@ -76,14 +77,18 @@ def generate_qa(indices, key):
                 return False
             else:
                 non_successful_rows.append((row['id'], sample_text, 'Error: ' + str(e)))
-        time.sleep(10)  # Sleep for 60 seconds to avoid hitting rate limits
+
+        # time.sleep(sleep_time)  # Sleep for the specified time to avoid hitting rate limits
+        time.sleep(sleep_time)
 
     return True
 
 
 
 if __name__ == "__main__":
+    print('nothing')
 
+    """
     key_file = pd.read_csv('key.csv')
     key = key_file['key'].tolist()[0]
 
@@ -143,6 +148,11 @@ if __name__ == "__main__":
             print(f"Non-successful rows saved to non_successful_rows.csv")
     except Exception as e:
         print(f"An error occurred while writing non-successful rows to CSV: {e}")
+
+    """
+
+
+
 
 
     """

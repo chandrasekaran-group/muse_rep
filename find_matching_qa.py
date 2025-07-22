@@ -5,6 +5,7 @@ from generate_qa import generate_qa
 from typing import List
 from utils import load_model, load_tokenizer, write_csv, read_json, write_json, load_csv
 import torch
+import time
 
 
 def compute_matching_indices(log_csv: str) -> list[int]:
@@ -107,7 +108,8 @@ def verify_pairs(model, tokenizer, qa_dir: str, indices: list[int]) -> list[int]
                     icl_as=[d['answer'] for d in icl]
                 )
                 print('response: ', response, '     expected: ', expected)
-                if response == expected:
+                #  check if response matches expected, even if small or capitalization differences
+                if response.strip().lower() == expected.strip().lower():
                     matched.append([idx, i])
                     print('==================== found a match! =======================')
         except:
@@ -118,10 +120,16 @@ def verify_pairs(model, tokenizer, qa_dir: str, indices: list[int]) -> list[int]
 
 def main(
     key,
-    qa_dir: str = "books_forget_matching_qas",
+    qa_dir: str = "books_forget_matching_qas_new",
     model_name: str = "muse-bench/MUSE-Books_target",
-    tokenizer_name: str = "meta-llama/Llama-2-7b-hf"
+    matching_file: str = None,
+    tokenizer_name: str = "meta-llama/Llama-2-7b-hf",
 ):
+
+    ## temporary:
+    qa_dir = "books_forget_newqa/"
+    print('!!!!!!!!!!!!!!!!! Using temporary QA directory:', qa_dir)
+    # ----------------
 
     print('key: ', key)
 
@@ -130,26 +138,57 @@ def main(
 
     # indices = list(range(553))
     indices = list(range(max_id))
+    # indices = [198]
+
+    # paired_df = pd.read_csv("matching_qa_pairs_combined.csv")
+    # print(paired_df.head())
+    # indices = list(set(indices) - set(paired_df['id'].values))
+    # print(len(indices), ' indices to consider for matching.')
 
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
     model, tokenizer = load_hf_model(model_name, tokenizer_name, device=device)
-    matches = verify_pairs(model, tokenizer, qa_dir, indices)
-    match_df = pd.DataFrame(matches, columns=['chunk_idx', 'q_idx'])
-    match_df.to_csv("initial_matching_qas.csv", index=False)
-    matching_indices = list(match_df['chunk_idx'].values)
-    print(matching_indices)
 
-    remaining_indices = sorted(set(indices) - set(matching_indices))[:considering_count]
+
+    ### compute initial matching indices
+    if matching_file is None:
+        matches = verify_pairs(model, tokenizer, qa_dir, indices)
+        match_df = pd.DataFrame(matches, columns=['chunk_idx', 'q_idx'])
+        match_df.to_csv("initial_matching_qas.csv", index=False)
+        matching_indices = list(match_df['chunk_idx'].values)
+    else:
+        match_df = pd.read_csv(matching_file, index_col=None)
+        matches = match_df.values.tolist()
+        print(match_df.head())
+        matching_indices = list(match_df['id'].values)
+    
+    print(matching_indices)
+    print(matches[:5])
+    print(f"Initial matching indices: {len(matching_indices)}")
+
+
+    # prev_set = set(list(range(36)))
+    prev_set = set()  # No previous set for now
+
+    remaining_indices = sorted(set(indices) - set(matching_indices) - prev_set)[:considering_count]
     print(remaining_indices)
+    
+    exit(0)
 
     qa_dir = "books_forget_newqa/"
     try_counter = 0
     while remaining_indices:
         # Generate questions for remaining indices
-        gen_flag = generate_qa(remaining_indices, key)
-        if not gen_flag:
-            print('Exiting due to rate limit of Qwen!')
-            break
+        while True:
+            gen_flag = generate_qa(remaining_indices, key, sleep_time=10)
+            if gen_flag:
+                break
+            print('long sleep time, waiting for Qwen to recover...')
+            time.sleep(60 * 20)  # Sleep for 20 minutes
+
+        # if not gen_flag:
+        #     print('Exiting due to rate limit of Qwen!')
+        #     break
+
         new_matches = verify_pairs(model, tokenizer, qa_dir, remaining_indices)
 
         matches += new_matches
@@ -166,7 +205,7 @@ def main(
         match_df.to_csv("matching_qas.csv")
 
         try_counter += 1
-        if try_counter >= 5:
+        if try_counter >= 2:
             break
 
     return matching_indices
@@ -179,11 +218,12 @@ if __name__ == "__main__":
     a.extend([2,3,4])
 
     parser = argparse.ArgumentParser(description="Find matching QA pairs")
-    parser.add_argument("--qa_dir", default="books_forget_matching_qas", help="Directory containing QA csv files")
+    parser.add_argument("--qa_dir", default="books_forget_matching_qas_new", help="Directory containing QA csv files")
     parser.add_argument("--model", default="muse-bench/MUSE-Books_target", help="Model name on HuggingFace")
+    parser.add_argument("--matching_file", default=None, help="Path to the matching file")
     args = parser.parse_args()
 
     key_file = pd.read_csv('key.csv')
     key = key_file['key'].tolist()[0]
 
-    main(key, args.qa_dir, args.model)
+    main(key, args.qa_dir, args.model, args.matching_file)

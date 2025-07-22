@@ -9,7 +9,8 @@ if __name__ == "__main__":
     parent_dir_new = sys.argv[2]
     match_df_file = sys.argv[3]
 
-    match_dir = 'books_forget_matching_qas'
+    # match_dir = 'books_forget_matching_qas'
+    match_dir = 'books_forget_matching_qas_new'
 
     
     match_df = pd.read_csv(match_df_file, index_col=0)
@@ -30,9 +31,9 @@ if __name__ == "__main__":
         file_path = os.path.join(parent_dir, f"qa_pair_{idx}.csv")
         if os.path.exists(file_path):
             print(file_path)
-            df = pd.read_csv(file_path, index_col=None, header=None, skiprows=1, names=["question", "answer"])
+            df = pd.read_csv(file_path, index_col=None, header=None, skiprows=1, names=["question", "answer", "id", "index"])
             print(f"File exists with {len(df)} rows.")
-            df['id'] = idx
+            # df['id'] = idx
             # if len(df) > 1:
             #     df = df[:1]  # Keep only the first row
             df['index'] = list(range(len(df)))

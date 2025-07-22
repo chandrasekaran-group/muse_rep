@@ -31,6 +31,7 @@ def eval_model(
     knowmem_retain_qa_icl_file: str | None = None,
     temp_dir: str | None = None,
     device: str | None = None,
+    forget_file: str | None = None
 ) -> Dict[str, float]:
     # Argument sanity check
     if not metrics:
@@ -53,6 +54,16 @@ def eval_model(
         knowmem_retain_qa_file = DEFAULT_DATA[corpus]['knowmem_retain_qa_file'] if knowmem_retain_qa_file is None else knowmem_retain_qa_file
         knowmem_retain_qa_icl_file = DEFAULT_DATA[corpus]['knowmem_retain_qa_icl_file'] if knowmem_retain_qa_icl_file is None else knowmem_retain_qa_icl_file
 
+    if forget_file is not None:
+        verbmem_forget_file = forget_file
+        privleak_forget_file = forget_file
+        knowmem_forget_qa_file = forget_file
+
+        if temp_dir is not None:
+            temp_dir = os.path.join(temp_dir, forget_file.split('/')[-1].split('.')[0])
+            print(f"Using temporary directory: {temp_dir}")
+            os.makedirs(temp_dir, exist_ok=True)
+    
     out = {}
 
     # 1. verbmem_f
@@ -152,6 +163,7 @@ def load_then_eval_models(
     metrics: List[str] = SUPPORTED_METRICS,
     temp_dir: str = "temp",
     device: str | None = None,
+    forget_files: List[str] | None = None
 ) -> DataFrame:
     # Argument sanity check
     # if not model_dirs:
@@ -179,16 +191,25 @@ def load_then_eval_models(
         print(f"Evaluating model {name} at {model_dir} ...")
         model = load_model(model_dir).to(device)
         tokenizer = load_tokenizer(tokenizer_dir)
-        res = eval_model(
-            model, tokenizer, metrics, corpus,
-            temp_dir=os.path.join(temp_dir, name),
-            device=device
-        )
-        out.append({'name': name} | res)
-        print(out)
-        # if out_file is not None: write_csv(out, out_file)
-        out_df = DataFrame(out)
-        out_df.to_csv(out_file, index=False)
+
+        if forget_files is None:
+            forget_files = [None]
+
+        for forget_file in forget_files:
+            res = eval_model(
+                model, tokenizer, metrics, corpus,
+                temp_dir=os.path.join(temp_dir, name),
+                device=device, forget_file=forget_file
+            )
+
+            if forget_file is not None:
+                name = f"{name}_{forget_file.split('/')[-1].split('.')[0]}"
+
+            out.append({'name': name} | res)
+            print(out)
+            # if out_file is not None: write_csv(out, out_file)
+            out_df = DataFrame(out)
+            out_df.to_csv(out_file, index=False)
         
     return DataFrame(out)
 
@@ -202,8 +223,9 @@ if __name__ == '__main__':
     parser.add_argument('--corpus', type=str, required=True, choices=CORPORA)
     parser.add_argument('--out_file', type=str, required=True)
     parser.add_argument('--metrics', type=str, nargs='+', default=SUPPORTED_METRICS)
-    parser.add_argument('--device', type=str, default=None,
-                        help="Device to run evaluation on (e.g., 'cuda' or 'cpu'). Defaults to CUDA if available.")
+    parser.add_argument('--device', type=str, default=None, help="Device to run evaluation on (e.g., 'cuda' or 'cpu'). Defaults to CUDA if available.")
+    parser.add_argument('--forget_files', type=str, nargs='+', default=None, help="List of files to use for forgetting.")
+
     args = parser.parse_args()
     args_dict = vars(args)
     load_then_eval_models(**args_dict)

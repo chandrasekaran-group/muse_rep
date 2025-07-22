@@ -1,9 +1,7 @@
 from .utils import read_text, pad_or_trim_tensor
-
 from typing import List, Tuple
 from pathlib import Path
 import json
-
 import torch
 from torch.utils.data import Dataset
 import torch.nn.functional as F
@@ -18,6 +16,7 @@ import pandas as pd
 def chunk_tokens(tokens, chunk_size):
     for i in range(0, len(tokens), chunk_size):
         yield tokens[i:i + chunk_size]
+
 
 def main(txt_path, csv_path):
     tokenizer = AutoTokenizer.from_pretrained("meta-llama/Llama-2-7b-hf")
@@ -195,7 +194,6 @@ class DefaultDataset(Dataset):
             }
 
         return collate_fn
-
 
 
 class ForgetRetainDataset(DefaultDataset):
