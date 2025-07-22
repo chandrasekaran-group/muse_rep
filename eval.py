@@ -109,12 +109,12 @@ def eval_model(
             data = load_csv(knowmem_forget_qa_file)
             questions = data['question'].tolist()
             answers = data['answer'].tolist()
-            icl = read_json(knowmem_forget_qa_icl_file)
         else:
             qa = read_json(knowmem_forget_qa_file)
             questions = [d['question'] for d in qa]
             answers = [d['answer'] for d in qa]
-            icl = read_json(knowmem_forget_qa_icl_file)
+
+        icl = read_json(knowmem_forget_qa_icl_file)
 
         agg, log = eval_knowmem(
             questions=questions,
@@ -135,11 +135,20 @@ def eval_model(
 
     # 4. knowmem_r
     if 'knowmem_r' in metrics:
-        qa = read_json(knowmem_retain_qa_file)
+        if knowmem_retain_qa_file.endswith('.csv'):
+            data = load_csv(knowmem_retain_qa_file)
+            questions = data['question'].tolist()
+            answers = data['answer'].tolist()
+        else:
+            qa = read_json(knowmem_retain_qa_file)
+            questions = [d['question'] for d in qa]
+            answers = [d['answer'] for d in qa]
+
         icl = read_json(knowmem_retain_qa_icl_file)
+
         agg, log = eval_knowmem(
-            questions=[d['question'] for d in qa],
-            answers=[d['answer'] for d in qa],
+            questions=questions,
+            answers=answers,
             icl_qs=[d['question'] for d in icl],
             icl_as=[d['answer'] for d in icl],
             model=model, tokenizer=tokenizer,
