@@ -12,7 +12,11 @@ def finetune(
     per_device_batch_size: int = 2,
     learning_rate: float = 1e-5,
     max_len: int = 4096,
-    tokenizer_dir: str | None = None
+    tokenizer_dir: str | None = None,
+    portion: float = 1.0,
+    exclude_file: str | None = None,
+    rand_seed: int = 1,
+    upsampling: int = 1
 ):
     model, tokenizer = load_model_and_tokenizer(
         model_dir,
@@ -22,7 +26,11 @@ def finetune(
     dataset = DefaultDataset(
         data_file,
         tokenizer=tokenizer,
-        max_len=max_len
+        max_len=max_len,
+        portion=portion,
+        exclude_file=exclude_file,
+        rand_seed=rand_seed,
+        upsampling=upsampling
     )
 
     training_args = transformers.TrainingArguments(
