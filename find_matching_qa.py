@@ -127,8 +127,8 @@ def main(
 ):
 
     ## temporary:
-    qa_dir = "books_forget_newqa/"
-    print('!!!!!!!!!!!!!!!!! Using temporary QA directory:', qa_dir)
+    # qa_dir = "books_forget_newqa/"
+    # print('!!!!!!!!!!!!!!!!! Using temporary QA directory:', qa_dir)
     # ----------------
 
     print('key: ', key)
@@ -157,9 +157,11 @@ def main(
         matching_indices = list(match_df['chunk_idx'].values)
     else:
         match_df = pd.read_csv(matching_file, index_col=None)
+        match_df = match_df[["chunk_idx","q_idx"]]
         matches = match_df.values.tolist()
         print(match_df.head())
-        matching_indices = list(match_df['id'].values)
+        # matching_indices = list(match_df['id'].values)
+        matching_indices = list(match_df['chunk_idx'].values)
     
     print(matching_indices)
     print(matches[:5])
@@ -172,7 +174,7 @@ def main(
     remaining_indices = sorted(set(indices) - set(matching_indices) - prev_set)[:considering_count]
     print(remaining_indices)
     
-    exit(0)
+    # exit(0)
 
     qa_dir = "books_forget_newqa/"
     try_counter = 0
@@ -224,6 +226,6 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     key_file = pd.read_csv('key.csv')
-    key = key_file['key'].tolist()[0]
+    key = key_file['key'].tolist()[1]
 
     main(key, args.qa_dir, args.model, args.matching_file)
