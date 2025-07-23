@@ -9,7 +9,6 @@ data
 temp/*
 *.csv
 key.csv
-*.sh
 *.png
 *.txt
 plot_results.py
