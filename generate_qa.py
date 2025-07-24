@@ -46,9 +46,9 @@ def process_response(response, index, directory=""):
 
 
 def generate_qa(indices, key, sleep_time=10):
-    forget_df = pd.read_csv("books_forget.csv", index_col=None)
+    forget_df = pd.read_csv("~/muse_data/books_forget.csv", index_col=None)
     print(forget_df.head())
-    directory = "books_forget_newqa/"
+    directory = "~/muse_data/books_forget_newqa/"
     if not os.path.exists(directory):
         os.makedirs(directory)
 
