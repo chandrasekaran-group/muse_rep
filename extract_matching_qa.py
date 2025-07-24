@@ -13,13 +13,15 @@ if __name__ == "__main__":
     match_dir = 'books_forget_matching_qas_new'
 
     
-    match_df = pd.read_csv(match_df_file, index_col=0)
+    match_df = pd.read_csv(match_df_file, index_col=0).sort_values(by='chunk_idx')
     print(match_df.head())
 
     not_existing_files = []
     df_list = []
     prev_row = -1
     running_qa_idx = []
+    missing_vals = []
+    duplicate_rows = []
     for i, row in match_df.iterrows():
         idx = row['chunk_idx']
         qa_idx = row['q_idx']
@@ -31,6 +33,10 @@ if __name__ == "__main__":
         file_path = os.path.join(parent_dir, f"qa_pair_{idx}.csv")
         if os.path.exists(file_path):
             print(file_path)
+            file_path_tmp = os.path.join(parent_dir_new, f"qa_pair_{idx}.csv")
+            if os.path.exists(file_path_tmp):
+                duplicate_rows.append(idx)
+
             df = pd.read_csv(file_path, index_col=None, header=None, skiprows=1, names=["question", "answer", "id", "index"])
             print(f"File exists with {len(df)} rows.")
             # df['id'] = idx
@@ -63,6 +69,7 @@ if __name__ == "__main__":
                 df_list.append(df)
             else:
                 not_existing_files.append(file_path)
+                missing_vals.append((idx, qa_idx))
                 print(f"File {file_path} does not exist.")
             
         prev_row = idx
@@ -73,3 +80,6 @@ if __name__ == "__main__":
     print(concat_df)
     concat_df = concat_df[['id', 'question', 'answer']]
     concat_df.to_csv("matching_qa_pairs_combined.csv", index=False)
+    print('not existing files:', not_existing_files)
+    print('missing values:', missing_vals)
+    print('duplicate rows:', duplicate_rows)

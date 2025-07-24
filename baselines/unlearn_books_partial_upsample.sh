@@ -1,6 +1,8 @@
 CORPUS="books"
 
-FORGET="../data/$CORPUS/raw/forget.txt"
+# FORGET="../data/$CORPUS/raw/forget.txt"
+FORGET="../data/news/raw/forget.txt"
+
 RETAIN="../data/$CORPUS/raw/retain1.txt"
 
 TARGET_DIR="muse-bench/MUSE-Books_target"
@@ -16,9 +18,8 @@ FT_LR='1e-5'
 SEED=1
 
 
-# algo_list=('npo' 'npo_gdr' 'npo_klr')
-# algo_list=('npo')
 algo_list=('npo' 'npo_gdr')
+# algo_list=('npo_gdr')
 forget_portion_list=(0.05)
 # forget_portion_list=(0.05 0.1 0.25 0.5 0.75)
 # forget_portion_list=(0.05 0.1 0.25 0.5 0.75 1.0)
@@ -34,6 +35,12 @@ for algo in "${algo_list[@]}"; do
             if [ "$forget_portion" == "1.0" ]; then
                 out_dir="./ckpt/$CORPUS/${algo}_${forget_portion}_u${upsample_ratio}"
             fi
+            # if news in forget file name, include it in output directory
+            if [[ "$FORGET" == *"news"* ]]; then
+                out_dir="./ckpt/$CORPUS/${algo}_news_${forget_portion}_u${upsample_ratio}"
+                echo "Output directory: $out_dir"
+            fi
+            # if upsample ratio is 1.0, don't include it in output directory
             CUDA_VISIBLE_DEVICES=0,1,2,3 python unlearn.py \
                 --algo $algo \
                 --model_dir $TARGET_DIR --tokenizer_dir $LLAMA_DIR \
@@ -44,5 +51,6 @@ for algo in "${algo_list[@]}"; do
                 --per_device_batch_size $PER_DEVICE_BATCH_SIZE \
                 --seed $SEED \
                 --upsample $upsample_ratio
+        done
     done
 done

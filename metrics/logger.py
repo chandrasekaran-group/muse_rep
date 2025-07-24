@@ -102,6 +102,12 @@ class RougeEvalLogger_new:
             columns.append('question')
         history_df = pd.DataFrame(self.history, columns=columns)
 
+        if len(self.history[0]) == 9:  # If question is included
+            history_df = history_df[[
+                'question','expected_response', 'stripped_output', 'rougeL', 'rougeL_recall',
+                'rouge1', 'rouge1_recall'
+            ]]
+
         agg = {}
         # compute aggregate statistics for rouge columns
         for key in [

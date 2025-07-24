@@ -109,7 +109,7 @@ def verify_pairs(model, tokenizer, qa_dir: str, indices: list[int]) -> list[int]
                 )
                 print('response: ', response, '     expected: ', expected)
                 #  check if response matches expected, even if small or capitalization differences
-                if response.strip().lower() == expected.strip().lower():
+                if response.strip().lower() == expected.strip().lower() or response.strip().lower() == 'a ' + expected.strip().lower() or response.strip().lower() == 'A ' + expected.strip().lower():
                     matched.append([idx, i])
                     print('==================== found a match! =======================')
         except:
@@ -207,7 +207,7 @@ def main(
         match_df.to_csv("matching_qas.csv")
 
         try_counter += 1
-        if try_counter >= 2:
+        if try_counter >= 4:
             break
 
     return matching_indices
@@ -226,6 +226,6 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     key_file = pd.read_csv('key.csv')
-    key = key_file['key'].tolist()[1]
+    key = key_file['key'].tolist()[0]
 
     main(key, args.qa_dir, args.model, args.matching_file)
