@@ -12,7 +12,6 @@ if __name__ == "__main__":
     # match_dir = 'books_forget_matching_qas'
     match_dir = 'books_forget_matching_qas_new'
 
-    
     match_df = pd.read_csv(match_df_file, index_col=0).sort_values(by='chunk_idx')
     print(match_df.head())
 
@@ -83,3 +82,4 @@ if __name__ == "__main__":
     print('not existing files:', not_existing_files)
     print('missing values:', missing_vals)
     print('duplicate rows:', duplicate_rows)
+    print('Total matching sections:', len(concat_df['id'].unique()))
