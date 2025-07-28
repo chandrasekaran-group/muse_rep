@@ -40,7 +40,8 @@ def main():
             max_len=args.max_len,
             tokenizer_dir=args.tokenizer_dir,
             portion=args.forget_portion,
-            exclude_file=args.match_file,
+            # exclude_file=args.match_file,
+            include_file=args.match_file,
             rand_seed=args.seed,
             upsampling=args.upsample
         )
@@ -64,7 +65,8 @@ def main():
             resume_from_checkpoint=args.resume_from_checkpoint,
             # forget_subset_indices=forget_subset_indices,
             portion=args.forget_portion,
-            exclude_file=args.match_file,
+            # exclude_file=args.match_file,
+            include_file=args.match_file,
             rand_seed=args.seed,
             upsampling=args.upsample
         )
@@ -106,8 +108,8 @@ def get_args():
     )
 
     parser.add_argument(
-        '--match_file', type=str, default='/scratch/aebrahim/muse_rep/matching_qa_pairs_combined.csv',
-        help="Path to the matching file to exclude their indices when portion < 1.0"
+        '--match_file', type=str, default='~/muse_data/matching_qa_pairs_combined.csv',
+        help="Path to the matching file to exclude/include their indices when portion < 1.0"
     )
 
     parser.add_argument(

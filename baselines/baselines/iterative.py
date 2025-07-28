@@ -23,6 +23,7 @@ def unlearn(
     # forget_subset_indices: list[int] | None = None,
     portion: float = 1.0,
     exclude_file: str | None = None,
+    include_file: str | None = None,
     rand_seed: int = 1,
     upsampling: float = 1.0
 ):
@@ -61,6 +62,7 @@ def unlearn(
         # forget_subset_indices=forget_subset_indices
         portion=portion,
         exclude_file=exclude_file,
+        include_file=include_file,
         rand_seed=rand_seed,
         upsampling=upsampling
     )

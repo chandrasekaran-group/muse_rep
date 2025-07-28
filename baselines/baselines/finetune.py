@@ -15,6 +15,7 @@ def finetune(
     tokenizer_dir: str | None = None,
     portion: float = 1.0,
     exclude_file: str | None = None,
+    include_file: str | None = None,
     rand_seed: int = 1,
     upsampling: float = 1.0
 ):
@@ -29,6 +30,7 @@ def finetune(
         max_len=max_len,
         portion=portion,
         exclude_file=exclude_file,
+        include_file=include_file,
         rand_seed=rand_seed,
         upsampling=upsampling
     )

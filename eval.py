@@ -9,6 +9,21 @@ from transformers import LlamaForCausalLM, LlamaTokenizer
 import torch
 from typing import List, Dict, Literal
 from pandas import DataFrame
+import pandas as pd
+
+
+def process_forget_file(indices_ratio: str, indices_seed: int = -1, parent_dir: str = None) -> str:
+    """
+    process the forget file by keeping the subset of indices that is specified by a file defined by `indices_seed`. 
+    """
+    indices_file = f"forget_indices_{indices_ratio}_seed_{indices_seed}.csv"
+    if parent_dir is not None:
+        indices_file = os.path.join(parent_dir, indices_file)
+
+    indices_df = pd.read_csv(indices_file, index_col=None)
+    indices = indices_df['id'].tolist()
+
+    return indices
 
 
 def eval_model(
@@ -31,7 +46,9 @@ def eval_model(
     knowmem_retain_qa_icl_file: str | None = None,
     temp_dir: str | None = None,
     device: str | None = None,
-    forget_file: str | None = None
+    forget_file: str | None = None,
+    indices_seed: int = -1,
+    including_ratio: str = '1.0'
 ) -> Dict[str, float]:
     # Argument sanity check
     if not metrics:
@@ -63,6 +80,17 @@ def eval_model(
             temp_dir = os.path.join(temp_dir, forget_file.split('/')[-1].split('.')[0])
             print(f"Using temporary directory: {temp_dir}")
             os.makedirs(temp_dir, exist_ok=True)
+
+    if indices_seed >= 0:
+        including_indices = process_forget_file(including_ratio, indices_seed, parent_dir="data/books/raw/")
+
+        if temp_dir is not None:
+            # temp_dir = os.path.join(temp_dir, forget_file.split('/')[-1].split('.')[0])
+            temp_dir = os.path.join(temp_dir, f"_{including_ratio}_seed_{indices_seed}")
+            print(f"Using temporary directory: {temp_dir}")
+            os.makedirs(temp_dir, exist_ok=True)
+    else:
+        including_indices = None
     
     out = {}
 
@@ -70,11 +98,12 @@ def eval_model(
     if 'verbmem_f' in metrics:
         # if .csv file, call load_csv
         if verbmem_forget_file.endswith('.csv'):
-            data = load_csv(verbmem_forget_file)
+            data = load_csv(verbmem_forget_file, including_indices=including_indices)
             prompts = data['prompt'].tolist()
             gts = data['gt'].tolist()
         else:
             data = read_json(verbmem_forget_file)
+            print('len eval data: ', len(data))
             prompts = [d['prompt'] for d in data]
             gts = [d['gt'] for d in data]
 
@@ -106,7 +135,9 @@ def eval_model(
     if 'knowmem_f' in metrics:
         # if .csv file, call load_csv
         if knowmem_forget_qa_file.endswith('.csv'):
-            data = load_csv(knowmem_forget_qa_file)
+            data = load_csv(knowmem_forget_qa_file, including_indices=including_indices)
+            print('len eval data: ', len(data))
+            print(data.head())
             questions = data['question'].tolist()
             answers = data['answer'].tolist()
         else:
@@ -137,6 +168,7 @@ def eval_model(
     if 'knowmem_r' in metrics:
         if knowmem_retain_qa_file.endswith('.csv'):
             data = load_csv(knowmem_retain_qa_file)
+            print('len eval data: ', len(data))
             questions = data['question'].tolist()
             answers = data['answer'].tolist()
         else:
@@ -172,7 +204,9 @@ def load_then_eval_models(
     metrics: List[str] = SUPPORTED_METRICS,
     temp_dir: str = "temp",
     device: str | None = None,
-    forget_files: List[str] | None = None
+    forget_files: List[str] | None = None,
+    including_ratios: List[int] | None = None,
+    indices_seed: int = -1
 ) -> DataFrame:
     # Argument sanity check
     # if not model_dirs:
@@ -204,21 +238,32 @@ def load_then_eval_models(
         if forget_files is None:
             forget_files = [None]
 
+        if including_ratios is None or indices_seed < 0:
+            including_ratios = ['1.0']
+
         for forget_file in forget_files:
-            res = eval_model(
-                model, tokenizer, metrics, corpus,
-                temp_dir=os.path.join(temp_dir, name),
-                device=device, forget_file=forget_file
-            )
+            for including_ratio in including_ratios:
+                res = eval_model(
+                    model, tokenizer, metrics, corpus,
+                    temp_dir=os.path.join(temp_dir, name),
+                    device=device, forget_file=forget_file,
+                    including_ratio=including_ratio,
+                    indices_seed=indices_seed
+                )
 
-            if forget_file is not None:
-                name = f"{name}_{forget_file.split('/')[-1].split('.')[0]}"
+                if forget_file is not None:
+                    name = f"{name}_{forget_file.split('/')[-1].split('.')[0]}"
 
-            out.append({'name': name} | res)
-            print(out)
-            # if out_file is not None: write_csv(out, out_file)
-            out_df = DataFrame(out)
-            out_df.to_csv(out_file, index=False)
+                if indices_seed >= 0:
+                    # name = f"{name}_{including_ratio}_seed_{indices_seed}"
+                    out.append({'name': name, 'indices_seed': indices_seed, 'including_ratio': including_ratio} | res)
+                else:
+                    out.append({'name': name} | res)
+                print(out)
+
+                # if out_file is not None: write_csv(out, out_file)
+                out_df = DataFrame(out)
+                out_df.to_csv(out_file, index=False)
         
     return DataFrame(out)
 
@@ -234,6 +279,8 @@ if __name__ == '__main__':
     parser.add_argument('--metrics', type=str, nargs='+', default=SUPPORTED_METRICS)
     parser.add_argument('--device', type=str, default=None, help="Device to run evaluation on (e.g., 'cuda' or 'cpu'). Defaults to CUDA if available.")
     parser.add_argument('--forget_files', type=str, nargs='+', default=None, help="List of files to use for forgetting.")
+    parser.add_argument('--including_ratios', type=str, nargs='+', default=None, help="List of ratios to include in the evaluation.")
+    parser.add_argument('--indices_seed', type=int, default=-1, help="Seed for selecting indices from the forget file. If -1, no specific indices are selected.")
 
     args = parser.parse_args()
     args_dict = vars(args)

@@ -7,7 +7,7 @@ TARGET_DIR="muse-bench/MUSE-Books_target"
 LLAMA_DIR="meta-llama/Llama-2-7b-hf"
 
 MAX_LEN=2048
-EPOCHS=5
+EPOCHS=1
 LR='1e-5'
 PER_DEVICE_BATCH_SIZE=8 # 4 GPUs
 FT_EPOCHS=1
@@ -19,9 +19,10 @@ SEED=1
 # algo_list=('npo' 'npo_gdr' 'npo_klr')
 # algo_list=('npo')
 algo_list=('npo' 'npo_gdr')
-forget_portion_list=(0.05 0.1)
+# forget_portion_list=(0.05 0.1)
 # forget_portion_list=(0.05 0.1 0.25 0.5 0.75)
 # forget_portion_list=(0.05 0.1 0.25 0.5 0.75 1.0)
+forget_portion_list=(1.0)
 
 
 for algo in "${algo_list[@]}"; do

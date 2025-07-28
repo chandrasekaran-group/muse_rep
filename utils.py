@@ -10,9 +10,14 @@ def read_json(fpath: str) -> Dict | List:
     with open(fpath, 'r') as f:
         return json.load(f)
 
-def load_csv(fpath: str) -> pd.DataFrame:
+def load_csv(fpath: str, 
+             including_indices: List[int] = None
+             ) -> pd.DataFrame:
     print(f"Reading CSV from {fpath} ...")
-    return pd.read_csv(fpath)
+    df = pd.read_csv(fpath, index_col=None)
+    if including_indices:
+        df = df[df['id'].isin(including_indices)]
+    return df
 
 
 def read_text(fpath: str) -> str:
