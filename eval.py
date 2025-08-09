@@ -218,7 +218,8 @@ def load_then_eval_models(
             if names[0] == 'target':
                 model_dirs = ['muse-bench/MUSE-Books_target']
             elif names[0] == 'retrain':
-                model_dirs = ['meta-llama/Llama-2-7b-hf']
+                # model_dirs = ['meta-llama/Llama-2-7b-hf']
+                model_dirs = ['EleutherAI/pythia-2.8b']  
             elif names[0] == 'base':
                 model_dirs = ['muse-bench/MUSE-Books_target', 'meta-llama/Llama-2-7b-hf']
     if out_file is not None and not out_file.endswith('.csv'):

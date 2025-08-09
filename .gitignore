@@ -1,5 +1,4 @@
 **/.archive
-**/*.ipynb
 baselines/ckpt/*
 **/__pycache__
 internal

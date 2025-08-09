@@ -3,6 +3,8 @@ SUPPORTED_METRICS = ['verbmem_f', 'privleak', 'knowmem_f', 'knowmem_r']
 CORPORA = ['news', 'books']
 
 LLAMA_DIR = "meta-llama/Llama-2-7b-hf"
+# LLAMA_DIR = "EleutherAI/pythia-2.8b"
+# LLAMA_DIR = "EleutherAI/pythia-6.9b"
 
 DEFAULT_DATA = {
     'news': {
