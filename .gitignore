@@ -11,3 +11,4 @@ key.csv
 *.png
 *.txt
 plot_results.py
+pythia-6.9b/*
