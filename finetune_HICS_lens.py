@@ -1,7 +1,49 @@
 import torch
 from datasets import load_dataset
 from transformer_lens import HookedTransformer
-from transformers import TrainingArguments, Trainer, DataCollatorForLanguageModeling
+from transformers import (
+    TrainingArguments,
+    Trainer,
+    DataCollatorForLanguageModeling,
+)
+
+
+class HookedTransformerWrapper(torch.nn.Module):
+    """Wrap ``HookedTransformer`` to mimic the 🤗 Transformers causal LM API.
+
+    ``transformer_lens`` models expect a positional ``tokens`` argument while the
+    🤗 ``Trainer`` supplies keyword arguments such as ``input_ids`` and
+    ``labels``.  This small wrapper translates between the two interfaces and
+    computes a next-token prediction loss when ``labels`` are provided.
+    """
+
+    def __init__(self, model: HookedTransformer):
+        super().__init__()
+        self.model = model
+        # Expose tokenizer so the rest of the training pipeline can access it
+        self.tokenizer = model.tokenizer
+
+    def forward(
+        self,
+        input_ids: torch.Tensor,
+        labels: torch.Tensor | None = None,
+        attention_mask: torch.Tensor | None = None,
+    ):
+        # HookedTransformer returns logits with shape (batch, seq, vocab)
+        logits = self.model(input_ids)
+
+        if labels is not None:
+            # Shift so that tokens < n predict token n
+            shift_logits = logits[:, :-1, :].contiguous()
+            shift_labels = labels[:, 1:].contiguous()
+            loss_fct = torch.nn.CrossEntropyLoss()
+            loss = loss_fct(
+                shift_logits.view(-1, shift_logits.size(-1)),
+                shift_labels.view(-1),
+            )
+            return {"loss": loss, "logits": logits}
+
+        return {"logits": logits}
 
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -18,42 +60,31 @@ train_dataset = dataset["train"]
 # -------------------------
 # Load tokenizer & model
 # -------------------------
-model = HookedTransformer.from_pretrained(
+base_model = HookedTransformer.from_pretrained(
     "meta-llama/Meta-Llama-3-8B",
     fold_ln=False,
     center_unembed=False,
     center_writing_weights=False,  # you'll learn about these arguments later!
 ).to(device)
 
-
-# --- Multi-GPU support ---
-n_gpus = torch.cuda.device_count()
-if n_gpus >= 4:
-    print(f"Using {n_gpus} GPUs via DataParallel.")
-    model = torch.nn.DataParallel(model, device_ids=[0, 1, 2, 3])
-else:
-    print(f"Using {n_gpus} GPU(s). DataParallel not applied.")
+# Wrap the transformer to provide a Hugging Face style forward signature
+model = HookedTransformerWrapper(base_model).to(device)
 
 
 # -------------------------
 # Tokenization
 # -------------------------
 context_length = 2048
+
+
 def tokenize(batch):
-    return model.module.tokenizer(
+    return model.tokenizer(
         batch["text"],
-        return_tensors='pt',
+        return_tensors="pt",
         add_special_tokens=True,
         padding="max_length",
         truncation=True,
-        max_length=context_length
-    ) if hasattr(model, "module") else model.tokenizer(
-        batch["text"],
-        return_tensors='pt',
-        add_special_tokens=True,
-        padding="max_length",
-        truncation=True,
-        max_length=context_length
+        max_length=context_length,
     )
 
 tokenized_dataset = train_dataset.map(tokenize, batched=True, remove_columns=["text"])
@@ -62,8 +93,8 @@ tokenized_dataset = train_dataset.map(tokenize, batched=True, remove_columns=["t
 # Data Collator (MLM=False because this is causal LM)
 # -------------------------
 data_collator = DataCollatorForLanguageModeling(
-    tokenizer=model.module.tokenizer if hasattr(model, "module") else model.tokenizer,
-    mlm=False
+    tokenizer=model.tokenizer,
+    mlm=False,
 )
 
 # -------------------------
@@ -92,8 +123,8 @@ trainer = Trainer(
     model=model,
     args=training_args,
     train_dataset=tokenized_dataset,
-    tokenizer=model.module.tokenizer if hasattr(model, "module") else model.tokenizer,
-    data_collator=data_collator
+    tokenizer=model.tokenizer,
+    data_collator=data_collator,
 )
 
 # -------------------------
@@ -102,9 +133,6 @@ trainer = Trainer(
 trainer.train()
 
 # Save final model
-if hasattr(model, "module"):
-    model.module.tokenizer.save_pretrained("./llama3_finetuned_HICS")
-    trainer.save_model("./llama3_finetuned_HICS")
-else:
-    model.tokenizer.save_pretrained("./llama3_finetuned_HICS")
-    trainer.save_model("./llama3_finetuned_HICS")
+model.tokenizer.save_pretrained("./llama3_finetuned_HICS")
+trainer.save_model("./llama3_finetuned_HICS")
+
