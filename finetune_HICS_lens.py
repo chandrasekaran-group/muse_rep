@@ -133,6 +133,8 @@ trainer = Trainer(
 trainer.train()
 
 # Save final model
+
 model.tokenizer.save_pretrained("./llama3_finetuned_HICS")
 trainer.save_model("./llama3_finetuned_HICS")
+
 
