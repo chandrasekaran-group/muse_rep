@@ -71,34 +71,20 @@ base_model = HookedTransformer.from_pretrained(
 model = HookedTransformerWrapper(base_model).to(device)
 
 
-# --- Multi-GPU support ---
-n_gpus = torch.cuda.device_count()
-if n_gpus >= 4:
-    print(f"Using {n_gpus} GPUs via DataParallel.")
-    model = torch.nn.DataParallel(model, device_ids=[0, 1, 2, 3])
-else:
-    print(f"Using {n_gpus} GPU(s). DataParallel not applied.")
-
-
 # -------------------------
 # Tokenization
 # -------------------------
 context_length = 2048
+
+
 def tokenize(batch):
-    return model.module.tokenizer(
+    return model.tokenizer(
         batch["text"],
-        return_tensors='pt',
+        return_tensors="pt",
         add_special_tokens=True,
         padding="max_length",
         truncation=True,
-        max_length=context_length
-    ) if hasattr(model, "module") else model.tokenizer(
-        batch["text"],
-        return_tensors='pt',
-        add_special_tokens=True,
-        padding="max_length",
-        truncation=True,
-        max_length=context_length
+        max_length=context_length,
     )
 
 tokenized_dataset = train_dataset.map(tokenize, batched=True, remove_columns=["text"])
@@ -107,8 +93,8 @@ tokenized_dataset = train_dataset.map(tokenize, batched=True, remove_columns=["t
 # Data Collator (MLM=False because this is causal LM)
 # -------------------------
 data_collator = DataCollatorForLanguageModeling(
-    tokenizer=model.module.tokenizer if hasattr(model, "module") else model.tokenizer,
-    mlm=False
+    tokenizer=model.tokenizer,
+    mlm=False,
 )
 
 # -------------------------
@@ -137,8 +123,8 @@ trainer = Trainer(
     model=model,
     args=training_args,
     train_dataset=tokenized_dataset,
-    tokenizer=model.module.tokenizer if hasattr(model, "module") else model.tokenizer,
-    data_collator=data_collator
+    tokenizer=model.tokenizer,
+    data_collator=data_collator,
 )
 
 # -------------------------
@@ -147,10 +133,8 @@ trainer = Trainer(
 trainer.train()
 
 # Save final model
-if hasattr(model, "module"):
-    model.module.tokenizer.save_pretrained("./llama3_finetuned_HICS")
-    trainer.save_model("./llama3_finetuned_HICS")
-else:
-    model.tokenizer.save_pretrained("./llama3_finetuned_HICS")
-    trainer.save_model("./llama3_finetuned_HICS")
+
+model.tokenizer.save_pretrained("./llama3_finetuned_HICS")
+trainer.save_model("./llama3_finetuned_HICS")
+
 
