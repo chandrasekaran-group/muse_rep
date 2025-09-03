@@ -14,8 +14,9 @@ train_dataset = dataset["train"]
 # Load model
 model = HookedTransformer.from_pretrained(
     # "meta-llama/Meta-Llama-3-8B",
-    "meta-llama/Llama-2-7b-hf",
+    # "meta-llama/Llama-2-7b-hf",
     # "gpt2-small",
+    "Qwen/Qwen3-0.6B",
     fold_ln=False,
     center_unembed=False,
     center_writing_weights=False,
@@ -40,7 +41,7 @@ input_ids = torch.tensor(tokenized["input_ids"])
 
 # Training loop
 optimizer = torch.optim.AdamW(model.parameters(), lr=1e-5)
-epochs = 5
+epochs = 1
 
 for epoch in range(epochs):
     print(f"Epoch {epoch+1}/{epochs}")
@@ -64,4 +65,8 @@ for epoch in range(epochs):
         print(f"Batch {i//batch_size+1}: Loss = {loss.item():.4f}")
 
 # Save model
-model.tokenizer.save_pretrained("./gpt2_small_finetuned_HICS")
+
+# output_dir = "./gpt2_small_finetuned_HICS"
+output_dir = "/qwen3_0.6B_finetuned_HICS"
+model.tokenizer.save_pretrained(output_dir)
+model.save_pretrained(output_dir)

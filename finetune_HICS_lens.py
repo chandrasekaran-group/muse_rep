@@ -1,49 +1,8 @@
+import os
 import torch
 from datasets import load_dataset
 from transformer_lens import HookedTransformer
-from transformers import (
-    TrainingArguments,
-    Trainer,
-    DataCollatorForLanguageModeling,
-)
-
-
-class HookedTransformerWrapper(torch.nn.Module):
-    """Wrap ``HookedTransformer`` to mimic the 🤗 Transformers causal LM API.
-
-    ``transformer_lens`` models expect a positional ``tokens`` argument while the
-    🤗 ``Trainer`` supplies keyword arguments such as ``input_ids`` and
-    ``labels``.  This small wrapper translates between the two interfaces and
-    computes a next-token prediction loss when ``labels`` are provided.
-    """
-
-    def __init__(self, model: HookedTransformer):
-        super().__init__()
-        self.model = model
-        # Expose tokenizer so the rest of the training pipeline can access it
-        self.tokenizer = model.tokenizer
-
-    def forward(
-        self,
-        input_ids: torch.Tensor,
-        labels: torch.Tensor | None = None,
-        attention_mask: torch.Tensor | None = None,
-    ):
-        # HookedTransformer returns logits with shape (batch, seq, vocab)
-        logits = self.model(input_ids)
-
-        if labels is not None:
-            # Shift so that tokens < n predict token n
-            shift_logits = logits[:, :-1, :].contiguous()
-            shift_labels = labels[:, 1:].contiguous()
-            loss_fct = torch.nn.CrossEntropyLoss()
-            loss = loss_fct(
-                shift_logits.view(-1, shift_logits.size(-1)),
-                shift_labels.view(-1),
-            )
-            return {"loss": loss, "logits": logits}
-
-        return {"logits": logits}
+import transformer_lens
 
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -57,84 +16,62 @@ dataset = load_dataset("text", data_files=files)
 # Merge into a single dataset
 train_dataset = dataset["train"]
 
+# model_name = "gpt2-small"  # or "meta-llama/Meta-Llama-3-8B" for larger models
+model_name = "meta-llama/Llama-2-7b-hf"
+context_length = 2048
+
 # -------------------------
 # Load tokenizer & model
 # -------------------------
-base_model = HookedTransformer.from_pretrained(
-    "meta-llama/Meta-Llama-3-8B",
+model = HookedTransformer.from_pretrained(
+    model_name,
     fold_ln=False,
     center_unembed=False,
     center_writing_weights=False,  # you'll learn about these arguments later!
 ).to(device)
 
-# Wrap the transformer to provide a Hugging Face style forward signature
-model = HookedTransformerWrapper(base_model).to(device)
-
 
 # -------------------------
 # Tokenization
 # -------------------------
-context_length = 2048
-
-
 def tokenize(batch):
     return model.tokenizer(
-        batch["text"],
+        batch['text'],
         return_tensors="pt",
         add_special_tokens=True,
         padding="max_length",
         truncation=True,
-        max_length=context_length,
+        max_length=context_length
     )
 
 tokenized_dataset = train_dataset.map(tokenize, batched=True, remove_columns=["text"])
+tokenized_dataset = tokenized_dataset.rename_column("input_ids", "tokens")
 
-# -------------------------
-# Data Collator (MLM=False because this is causal LM)
-# -------------------------
-data_collator = DataCollatorForLanguageModeling(
-    tokenizer=model.tokenizer,
-    mlm=False,
-)
+
+save_dir = './' + model_name.split('/')[-1] + "_finetuned_HICS"
+if not os.path.exists(save_dir):
+    os.makedirs(save_dir)
 
 # -------------------------
 # Training arguments
 # -------------------------
-training_args = TrainingArguments(
-    output_dir="./llama3_finetuned_HICS",
-    overwrite_output_dir=True,
-    num_train_epochs=5,
-    per_device_train_batch_size=8,  # batch size per GPU
-    gradient_accumulation_steps=8,
-    save_strategy="epoch",
-    logging_steps=50,
-    learning_rate=1e-5,
+training_args = transformer_lens.train.HookedTransformerTrainConfig(
+    save_dir=save_dir,
+    # save_dir="./Llama-2-7b-finetuned-HICS",
+    device=device,
+    batch_size=8,
+    num_epochs=5,
+    lr=1e-5,
+    save_every=950,
+    seed=0,
     warmup_steps=100,
     weight_decay=0.01,
-    fp16=True,
-    report_to="none",
-    remove_unused_columns=False 
 )
 
 # -------------------------
 # Trainer
 # -------------------------
-trainer = Trainer(
-    model=model,
-    args=training_args,
-    train_dataset=tokenized_dataset,
-    tokenizer=model.tokenizer,
-    data_collator=data_collator,
-)
-
-# -------------------------
-# Train
-# -------------------------
-trainer.train()
+transformer_lens.train.train(model, training_args, tokenized_dataset)
 
 # Save final model
-
-model.tokenizer.save_pretrained("./llama3_finetuned_HICS")
-trainer.save_model("./llama3_finetuned_HICS")
-
-
+model.tokenizer.save_pretrained(save_dir)

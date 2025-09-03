@@ -18,7 +18,9 @@ def get_response_from_openai(client, prompt):
       },
       extra_body={},
       # model="qwen/qwq-32b:free",
-      model="qwen/qwen3-235b-a22b-07-25:free",
+      # model="qwen/qwen3-235b-a22b-07-25:free",
+      # model="Qwen/Qwen3-235B-A22B-Instruct-2507"
+      model="qwen/qwen3-235b-a22b:free",
       messages=[
         {
           "role": "user",

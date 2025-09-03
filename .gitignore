@@ -12,3 +12,5 @@ key.csv
 *.txt
 plot_results.py
 pythia-6.9b/*
+pythia-*
+gpt2*

@@ -33,10 +33,6 @@ def tokenize(batch):
         add_special_tokens=True,
         max_length=context_length)
 
-        padding="max_length",
-        truncation=True,
-        max_length=context_length
-    )
 
 tokenized_dataset = train_dataset.map(tokenize, batched=True, remove_columns=["text"])
 
